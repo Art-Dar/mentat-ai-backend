@@ -219,3 +219,6 @@ __marimo__/
 
 # Dependencies (poetry)
 poetry.lock
+
+# ENV variables
+.env
