@@ -2,6 +2,7 @@ from app.services.ingestion.normalization import normalize_text
 
 # --- whitespace ---------------------------------------------------------
 
+
 def test_collapses_multiple_spaces():
     assert normalize_text("This   has     extra   spaces.").text == "This has extra spaces."
 
@@ -28,6 +29,7 @@ def test_strips_non_breaking_spaces():
 
 # --- unicode / entities -------------------------------------------------
 
+
 def test_decodes_html_entities():
     raw = "Tom &amp; Jerry said &quot;hello&quot;"
     assert normalize_text(raw).text == 'Tom & Jerry said "hello"'
@@ -49,6 +51,7 @@ def test_normalizes_apostrophe_variants_in_ukrainian_text():
 
 
 # --- validity guardrails ------------------------------------------------
+
 
 def test_flags_very_short_text_as_invalid():
     assert normalize_text("Hi.").is_likely_valid is False
@@ -77,12 +80,14 @@ def test_tracks_char_counts():
 
 # --- source type --------------------------------------------------------
 
+
 def test_source_type_is_recorded():
     assert normalize_text("Some text.", source_type="selection").source_type == "selection"
     assert normalize_text("Some text.").source_type == "readability"
 
 
 # --- language detection -------------------------------------------------
+
 
 def test_detects_ukrainian():
     raw = (
@@ -116,6 +121,7 @@ def test_no_language_for_too_short_text():
 
 
 # --- OCR homoglyph folding ---------------------------------------------
+
 
 def test_ocr_folds_mixed_script_word():
     # "Київ" with a Latin 'y' and 'i' — classic OCR contamination.

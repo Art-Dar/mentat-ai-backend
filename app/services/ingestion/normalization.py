@@ -44,10 +44,29 @@ _CANONICAL_APOSTROPHE = "\u2019"
 
 # Cyrillic <-> Latin lookalikes, ONLY for OCR-sourced text
 _LATIN_TO_CYRILLIC = {
-    "a": "а", "c": "с", "e": "е", "i": "і", "o": "о", "p": "р",
-    "x": "х", "y": "у", "s": "ѕ", "j": "ј",
-    "A": "А", "B": "В", "C": "С", "E": "Е", "H": "Н", "I": "І",
-    "K": "К", "M": "М", "O": "О", "P": "Р", "T": "Т", "X": "Х", "Y": "У",
+    "a": "а",
+    "c": "с",
+    "e": "е",
+    "i": "і",
+    "o": "о",
+    "p": "р",
+    "x": "х",
+    "y": "у",
+    "s": "ѕ",
+    "j": "ј",
+    "A": "А",
+    "B": "В",
+    "C": "С",
+    "E": "Е",
+    "H": "Н",
+    "I": "І",
+    "K": "К",
+    "M": "М",
+    "O": "О",
+    "P": "Р",
+    "T": "Т",
+    "X": "Х",
+    "Y": "У",
 }
 _CYRILLIC_TO_LATIN = {v: k for k, v in _LATIN_TO_CYRILLIC.items()}
 
@@ -61,8 +80,8 @@ class NormalizedText:
     original_char_count: int
     normalized_char_count: int
     source_type: SourceType
-    is_likely_valid: bool # false if result looks like an extraction failure
-    detected_language: str | None # ("uk", "en", ...) or None if unknown
+    is_likely_valid: bool  # false if result looks like an extraction failure
+    detected_language: str | None  # ("uk", "en", ...) or None if unknown
     language_confidence: float | None
 
 
@@ -138,9 +157,9 @@ def _normalize_apostrophes(text: str) -> str:
 
 
 def _collapse_whitespace(text: str) -> str:
-    text = re.sub(r"[ \t]+", " ", text) # runs of spaces/tabs -> one space
-    text = re.sub(r"[ \t]+\n", "\n", text) # trailing whitespace per line
-    text = re.sub(r"\n{3,}", "\n\n", text) # 3+ newlines -> paragraph break
+    text = re.sub(r"[ \t]+", " ", text)  # runs of spaces/tabs -> one space
+    text = re.sub(r"[ \t]+\n", "\n", text)  # trailing whitespace per line
+    text = re.sub(r"\n{3,}", "\n\n", text)  # 3+ newlines -> paragraph break
     return text.strip()
 
 
