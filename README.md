@@ -14,6 +14,7 @@
 `` cp .env.example .env`` (copy defaults form the example)
 
 ### Server
+
 * Install all dependencies ``poetry install``
 * Start server `` poetry run uvicorn app.main:app --reload``
 * Check connection ``http://localhost:8000/api/v1/health``
@@ -40,3 +41,8 @@
 
 ### Test
 * Testing text normalization: `` poetry run pytest tests/test_normalizer.py -v ``
+
+### Ruff
+* Lint  `` poetry run ruff check . ``
+* Lint + autofix `` poetry run ruff check . --fix ``
+* Format `` poetry run ruff format . ``
