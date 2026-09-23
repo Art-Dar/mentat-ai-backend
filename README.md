@@ -37,3 +37,6 @@
 4. Stage migration and update head ``  poetry run alembic upgrade head ``
 * Roll back one migration  `` poetry run alembic downgrade -1``
 * Show current migration heads	`` poetry run alembic heads ``
+
+### Test
+* Testing text normalization: `` poetry run pytest tests/test_normalizer.py -v ``
