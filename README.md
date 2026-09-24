@@ -1,9 +1,25 @@
 # mentat-ai-backend
 
-#### Requirements
+## Requirements
 * Python 3.12+
 * Poetry
 * Docker Desktop (running)
+
+## Contributing
+
+* `main` is protected, no direct pushes.
+* Work on a branch: `git checkout -b feat/your-feature`
+* Open a PR against `main`. CI (ruff + migrations + pytest) must pass.
+* One approval from the other team member is required before merge.
+
+## Check before creating PR
+```angular2html
+poetry check --lock          # lock file matches pyproject.toml
+poetry run ruff check .      # lint
+poetry run ruff format .     # format
+poetry run pytest            # tests
+```
+
 
 ### Poetry (venv & deps)
 * Establish venv with poetry: `` poetry config virtualenvs.in-project true ``
