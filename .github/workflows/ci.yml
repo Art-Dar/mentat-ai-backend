@@ -49,8 +49,11 @@ jobs:
           path: .venv
           key: venv-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
 
+      - name: Check lock file
+        run: poetry check --lock
+
       - name: Install dependencies
-        run: poetry install
+        run: poetry install --no-interaction
 
       - name: Lint
         run: poetry run ruff check .

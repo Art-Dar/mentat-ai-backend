@@ -217,8 +217,5 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# Dependencies (poetry)
-poetry.lock
-
 # ENV variables
 .env
