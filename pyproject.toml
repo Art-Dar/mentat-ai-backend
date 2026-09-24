@@ -7,7 +7,6 @@ authors = [
 ]
 readme = "README.md"
 requires-python = ">=3.12"
-package-mode = false
 dependencies = [
     "fastapi (>=0.141.1,<0.142.0)",
     "uvicorn[standard] (>=0.53.0,<0.54.0)",
@@ -20,6 +19,8 @@ dependencies = [
     "lingua-language-detector (>=2.2.0,<3.0.0)"
 ]
 
+[tool.poetry]
+package-mode = false
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
