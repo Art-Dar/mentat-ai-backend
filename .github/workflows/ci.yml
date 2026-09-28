@@ -29,6 +29,7 @@ jobs:
       DATABASE_URL: postgresql+asyncpg://test_user:test_password@localhost:5432/test_db
       ENVIRONMENT: ci
       DEBUG: false
+      JWT_SECRET: ci-test-secret-not-for-production
 
     steps:
       - uses: actions/checkout@v4
