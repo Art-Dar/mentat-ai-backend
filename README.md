@@ -55,8 +55,14 @@ poetry run pytest            # tests
 * Roll back one migration  `` poetry run alembic downgrade -1``
 * Show current migration heads	`` poetry run alembic heads ``
 
+### Auth
+* Seed the two Mentat users (reads `SEED_USER_1_USERNAME`/`SEED_USER_1_PASSWORD`, `SEED_USER_2_USERNAME`/`SEED_USER_2_PASSWORD` from `.env`): `` poetry run python scripts/seed_users.py ``
+* Login: `` POST /api/v1/auth/login `` with body `{"username": "...", "password": "..."}` → returns `{"access_token": "...", "token_type": "bearer"}`
+* Use the token on protected routes: `Authorization: Bearer <access_token>` header
+
 ### Test
 * Testing text normalization: `` poetry run pytest tests/test_normalizer.py -v ``
+* Testing auth (login + token validation): `` poetry run pytest tests/test_auth.py tests/test_security.py -v ``
 
 ### Ruff
 * Lint  `` poetry run ruff check . ``
