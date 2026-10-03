@@ -11,7 +11,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.db import Base
 
 if TYPE_CHECKING:
-    from app.models.user import User
+    from app.models import User, DocumentTag, Chunk
 
 
 def _enum_values(enum_cls: type[enum.Enum]) -> list[str]:
@@ -66,3 +66,9 @@ class Document(Base):
     content_hash: Mapped[str | None] = mapped_column(String(64))
 
     user: Mapped["User"] = relationship(back_populates="documents")
+    chunks: Mapped[list["Chunk"]] = relationship(
+        back_populates="document", cascade="all, delete-orphan"
+    )
+    tags: Mapped[list["DocumentTag"]] = relationship(
+        back_populates="document", cascade="all, delete-orphan"
+    )
