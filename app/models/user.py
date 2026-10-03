@@ -1,11 +1,15 @@
 import enum
 import uuid
+from typing import TYPE_CHECKING
 
 from sqlalchemy import CheckConstraint, ForeignKey, String, UniqueConstraint
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db import Base
+
+if TYPE_CHECKING:
+    from app.models import Document
 
 
 class User(Base):
@@ -16,6 +20,9 @@ class User(Base):
     email_verified: Mapped[bool] = mapped_column(default=False)
     display_name: Mapped[str | None] = mapped_column(String(255))
     identities: Mapped[list["AuthIdentity"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    documents: Mapped[list["Document"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
 

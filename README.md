@@ -34,6 +34,7 @@ poetry run pytest            # tests
 * Install all dependencies ``poetry install``
 * Start server `` poetry run uvicorn app.main:app --reload``
 * Check connection ``http://localhost:8000/api/v1/health``
+* Documentation `` http://127.0.0.1:8000/docs ``
 
 ### Database container
 * Start container: `` docker compose up -d   ``
@@ -64,6 +65,7 @@ poetry run pytest            # tests
 ### Test
 * Testing text normalization: `` poetry run pytest tests/test_normalizer.py -v ``
 * Testing auth (login + token validation): `` poetry run pytest tests/test_auth.py tests/test_security.py -v ``
+* Testing ingest: `` poetry run pytest tests/test_ingest.py -v``
 
 ### Ruff
 * Lint  `` poetry run ruff check . ``
