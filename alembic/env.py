@@ -39,13 +39,14 @@ def render_item(type_, obj, autogen_context):
         return f"pgvector.sqlalchemy.Vector({obj.dim})"
     return False
 
+
 # automatically treating changes in enums
 import alembic_postgresql_enum
 
 alembic_postgresql_enum.set_configuration(
     alembic_postgresql_enum.Config(
-        add_type_ignore=True, # keeps type checkers quiet on sync_enum_values
-        ignore_enum_values_order=True, # reordering members isn't a schema change
+        add_type_ignore=True,  # keeps type checkers quiet on sync_enum_values
+        ignore_enum_values_order=True,  # reordering members isn't a schema change
     )
 )
 
