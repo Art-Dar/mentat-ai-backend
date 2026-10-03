@@ -7,8 +7,7 @@ import uuid
 from hashlib import sha256
 
 from app.core.db import AsyncSessionLocal
-from app.models import Document, IngestionStatus
-from app.models import DocumentSource
+from app.models import Document, DocumentSource, IngestionStatus
 from app.services.ingestion.normalization import normalize_text
 
 logger = logging.getLogger(__name__)

@@ -11,7 +11,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.db import Base
 
 if TYPE_CHECKING:
-    from app.models import User, DocumentTag, Chunk
+    from app.models import Chunk, DocumentTag, User
 
 
 def _enum_values(enum_cls: type[enum.Enum]) -> list[str]:

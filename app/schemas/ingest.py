@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime
 
 from pydantic import BaseModel, Field, HttpUrl, field_validator
+
 from app.models import DocumentSource, IngestionStatus
 
 # Source types this endpoint currently accepts. IMAGE and PDF need the media
@@ -25,7 +26,9 @@ class IngestRequest(BaseModel):
     def source_must_be_supported(cls, value: DocumentSource) -> DocumentSource:
         if value not in SUPPORTED_SOURCES:
             supported = ", ".join(sorted(s.value for s in SUPPORTED_SOURCES))
-            raise ValueError(f"source '{value.value}' is not supported yet; use one of: {supported}")
+            raise ValueError(
+                f"source '{value.value}' is not supported yet; use one of: {supported}"
+            )
         return value
 
 

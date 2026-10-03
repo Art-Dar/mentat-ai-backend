@@ -1,5 +1,6 @@
 import enum
 import uuid
+from typing import TYPE_CHECKING
 
 from sqlalchemy import CheckConstraint, ForeignKey, String, UniqueConstraint
 from sqlalchemy import Enum as SAEnum
@@ -7,7 +8,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db import Base
 
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from app.models import Document
 

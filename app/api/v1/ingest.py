@@ -5,10 +5,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
 from app.core.deps import get_current_user
-from app.models import User, Document
+from app.models import Document
 from app.schemas.ingest import IngestRequest, IngestResponse
 
 router = APIRouter(prefix="/ingest", tags=["ingest"])
+
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=IngestResponse)
 async def ingest(
@@ -21,7 +22,7 @@ async def ingest(
     # (normalize -> chunk -> embed -> tag) by background worker, until - pending
 
     """HANDOFF: the queue ticket adds exactly one call here, after the commit:
-        background_tasks.add_task(process_document, document.id)"""
+    background_tasks.add_task(process_document, document.id)"""
 
     document = Document(
         user_id=uuid.UUID(current_user_id),
