@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.security import hash_password
 from app.main import app
-from app.models.user import User
+from app.models.user import User, AuthIdentity, AuthProvider
 
 # Plain sync engine, used only by test fixtures for setup/teardown.
 # The app itself always talks to the DB through the async engine inside
@@ -24,15 +24,30 @@ def client():
     with TestClient(app) as c:
         yield c
 
+@pytest.fixture
+def db_session():
+    with Session(_sync_engine) as session:
+        yield session
+
 
 @pytest.fixture
-def seeded_user() -> tuple[str, str]:
-    """Creates a user with a unique username so tests don't collide on re-runs."""
-    username = f"test_user_{uuid.uuid4().hex[:8]}"
-    password = "test_password_123"
+def seeded_user(db_session):
+    """Creates a user with a unique email so tests don't collide on re-runs."""
+    email = f"test-{uuid.uuid4().hex[:8]}@example.com"
+    password = "correct-horse-battery-staple"
 
-    with Session(_sync_engine) as db:
-        db.add(User(username=username, hashed_password=hash_password(password)))
-        db.commit()
+    user = User(email=email, email_verified=True)
+    user.identities.append(
+        AuthIdentity(
+            provider=AuthProvider.PASSWORD,
+            provider_user_id=email,
+            password_hash=hash_password(password),
+        )
+    )
+    db_session.add(user)
+    db_session.commit()
 
-    return username, password
+    yield email, password
+
+    db_session.delete(user)
+    db_session.commit()
