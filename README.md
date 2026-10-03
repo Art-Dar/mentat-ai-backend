@@ -34,6 +34,7 @@ poetry run pytest            # tests
 * Install all dependencies ``poetry install``
 * Start server `` poetry run uvicorn app.main:app --reload``
 * Check connection ``http://localhost:8000/api/v1/health``
+* Documentation `` http://127.0.0.1:8000/docs ``
 
 ### Database container
 * Start container: `` docker compose up -d   ``
