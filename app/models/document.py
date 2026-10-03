@@ -1,12 +1,17 @@
 import enum
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
-from sqlalchemy import (CheckConstraint, Enum as SAEnum, ForeignKey, Index, String, Text, DateTime)
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, Text
+from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db import Base
+
+if TYPE_CHECKING:
+    from app.models.user import User
 
 
 def _enum_values(enum_cls: type[enum.Enum]) -> list[str]:
@@ -14,18 +19,18 @@ def _enum_values(enum_cls: type[enum.Enum]) -> list[str]:
     return [member.value for member in enum_cls]
 
 
-class DocumentSource(str, enum.Enum):
-    ARTICLE = "article" # full page via Readability
-    SELECTION = "selection" # highlighted text, via the Selection API
-    IMAGE = "image" # OCR
+class DocumentSource(enum.StrEnum):
+    ARTICLE = "article"  # full page via Readability
+    SELECTION = "selection"  # highlighted text, via the Selection API
+    IMAGE = "image"  # OCR
     PDF = "pdf"
     NOTE = "note"
 
 
-class IngestionStatus(str, enum.Enum):
-    PENDING = "pending" # row created, background task not started
-    PROCESSING = "processing" # normalize → chunk → embed → tag in flight
-    COMPLETED = "completed" # chunks and embeddings exist, searchable
+class IngestionStatus(enum.StrEnum):
+    PENDING = "pending"  # row created, background task not started
+    PROCESSING = "processing"  # normalize → chunk → embed → tag in flight
+    COMPLETED = "completed"  # chunks and embeddings exist, searchable
     FAILED = "failed"
 
 
@@ -41,7 +46,9 @@ class Document(Base):
         ),
     )
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
     source: Mapped[DocumentSource] = mapped_column(
         SAEnum(DocumentSource, name="document_source", values_callable=_enum_values)
     )

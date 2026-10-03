@@ -1,9 +1,9 @@
-from datetime import datetime
 import enum
-from sqlalchemy import Enum as SAEnum
 import uuid
+from datetime import datetime
 
-from sqlalchemy import String, ForeignKey, CheckConstraint, UniqueConstraint, func
+from sqlalchemy import CheckConstraint, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db import Base
@@ -20,7 +20,8 @@ class User(Base):
         back_populates="user", cascade="all, delete-orphan"
     )
 
-class AuthProvider(str, enum.Enum):
+
+class AuthProvider(enum.StrEnum):
     PASSWORD = "password"
     GOOGLE = "google"
 

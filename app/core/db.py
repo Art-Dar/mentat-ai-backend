@@ -1,7 +1,8 @@
+from datetime import datetime
+
+from sqlalchemy import DateTime, func
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from datetime import datetime
-from sqlalchemy import DateTime, func
 
 from app.core.config import settings
 
