@@ -24,6 +24,7 @@ def client():
     with TestClient(app) as c:
         yield c
 
+
 @pytest.fixture
 def db_session():
     with Session(_sync_engine) as session:
