@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,7 +14,7 @@ router = APIRouter(prefix="/ingest", tags=["ingest"])
 async def ingest(
     payload: IngestRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user_id: str = Depends(get_current_user),
 ) -> IngestResponse:
     # accept a capture and return immediately with its document ID
     # row is created with status=PENDING and the raw text in `content`
@@ -22,7 +24,7 @@ async def ingest(
         background_tasks.add_task(process_document, document.id)"""
 
     document = Document(
-        user_id=current_user.id,
+        user_id=uuid.UUID(current_user_id),
         source=payload.source,
         url=str(payload.url) if payload.url else None,
         title=payload.title,
