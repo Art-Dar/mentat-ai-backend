@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.security import hash_password
 from app.main import app
-from app.models.user import User, AuthIdentity, AuthProvider
+from app.models.user import AuthIdentity, AuthProvider, User
 
 # Plain sync engine, used only by test fixtures for setup/teardown.
 # The app itself always talks to the DB through the async engine inside
