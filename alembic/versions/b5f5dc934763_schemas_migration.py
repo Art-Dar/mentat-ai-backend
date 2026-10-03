@@ -130,4 +130,11 @@ def downgrade() -> None:
     op.drop_table('users')
     op.drop_index('ix_tags_name_lower', table_name='tags')
     op.drop_table('tags')
+
+    # drop enums
+    op.execute("DROP TYPE IF EXISTS auth_provider")
+    op.execute("DROP TYPE IF EXISTS document_source")
+    op.execute("DROP TYPE IF EXISTS ingestion_status")
+    op.execute("DROP TYPE IF EXISTS tag_assigned_by")
+
     # ### end Alembic commands ###

@@ -37,6 +37,7 @@ poetry run pytest            # tests
 
 ### Database container
 * Start container: `` docker compose up -d   ``
+* Check db status: `` docker compose ps`` _Note: wait for 'healthy' status_
 * Close connection to container: `` docker compose down  ``
 * Check db container extensions: ``  docker exec -it mentat-ai-db psql -U mentat_user -d mentat_ai -c "\dx" ``
 
