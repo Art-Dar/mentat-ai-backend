@@ -54,6 +54,4 @@ class AuthIdentity(Base):
     provider_user_id: Mapped[str] = mapped_column(String(255))
     password_hash: Mapped[str | None] = mapped_column(String(255))
 
-    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
-
     user: Mapped["User"] = relationship(back_populates="identities")
