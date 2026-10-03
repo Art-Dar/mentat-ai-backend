@@ -16,14 +16,12 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
     email_verified: Mapped[bool] = mapped_column(default=False)
     display_name: Mapped[str | None] = mapped_column(String(255))
-    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
-
     identities: Mapped[list["AuthIdentity"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
 
 class AuthProvider(str, enum.Enum):
-    LOCAL = "password"
+    PASSWORD = "password"
     GOOGLE = "google"
 
 
@@ -51,7 +49,7 @@ class AuthIdentity(Base):
         )
     )
 
-    # Google's stable `sub` claim; for LOCAL, the normalized email
+    # Google's stable `sub` claim; for password, the normalized email
     provider_user_id: Mapped[str] = mapped_column(String(255))
     password_hash: Mapped[str | None] = mapped_column(String(255))
 

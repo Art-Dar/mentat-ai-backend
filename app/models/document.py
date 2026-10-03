@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import (CheckConstraint, Enum as SAEnum, ForeignKey, Index, String, Text)
+from sqlalchemy import (CheckConstraint, Enum as SAEnum, ForeignKey, Index, String, Text, DateTime)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -52,7 +52,7 @@ class Document(Base):
     error_message: Mapped[str | None] = mapped_column(Text)
     url: Mapped[str | None] = mapped_column(String(2048))
     title: Mapped[str | None] = mapped_column(String(512))
-    published_at: Mapped[datetime | None] = mapped_column()
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     file_path: Mapped[str | None] = mapped_column(String(1024))
     content: Mapped[str | None] = mapped_column(Text)
     language: Mapped[str | None] = mapped_column(String(8))
