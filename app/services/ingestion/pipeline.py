@@ -9,6 +9,8 @@ from hashlib import sha256
 from app.core.db import AsyncSessionLocal
 from app.models import Document, DocumentSource, IngestionStatus
 from app.services.ingestion.normalization import normalize_text
+from app.models import Chunk
+from app.services.ingestion.chunking import chunk_text
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +38,7 @@ async def process_document(document_id: uuid.UUID) -> None:
 
         try:
             _normalize(document)
-            # chunks = chunk_text(document.content)              <- SB 43
+            await _rechunk(document, db)
             # embed_chunks(chunks)                               <- SB 44
             # assign_tags(document)                              <- Story 5.1
             document.status = IngestionStatus.COMPLETED
@@ -62,3 +64,19 @@ def _normalize(document: Document) -> None:
     document.content = result.text
     document.language = result.detected_language
     document.content_hash = sha256(result.text.encode("utf-8")).hexdigest()
+
+async def _rechunk(document: Document, db: AsyncSession) -> None:
+    """Replace this document's chunks. Embeddings stay NULL until the
+    embedding stage fills them."""
+    await db.execute(delete(Chunk).where(Chunk.document_id == document.id))
+
+    for piece in chunk_text(document.content or ""):
+        db.add(
+            Chunk(
+                document_id=document.id,
+                chunk_index=piece.index,
+                content=piece.text,
+                start_char=piece.start_char,
+                end_char=piece.end_char,
+            )
+        )
