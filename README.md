@@ -66,6 +66,7 @@ poetry run pytest            # tests
 * Testing text normalization: `` poetry run pytest tests/test_normalizer.py -v ``
 * Testing auth (login + token validation): `` poetry run pytest tests/test_auth.py tests/test_security.py -v ``
 * Testing ingest: `` poetry run pytest tests/test_ingest.py -v``
+* Testing chunking: `` poetry run pytest tests/test_chunking.py -v ``
 
 ### Ruff
 * Lint  `` poetry run ruff check . ``
