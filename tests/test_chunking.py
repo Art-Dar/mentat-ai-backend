@@ -1,3 +1,5 @@
+from itertools import pairwise
+
 import pytest
 
 from app.services.ingestion.chunking import DEFAULT_CHUNK_SIZE, chunk_text
@@ -17,6 +19,7 @@ def _long_text(paragraphs: int = 20) -> str:
 
 
 # the offset contract
+
 
 def test_offsets_slice_back_to_the_chunk_text():
     text = _long_text()
@@ -43,6 +46,7 @@ def test_chunks_are_ordered_by_position():
 
 # sizing and overlap
 
+
 def test_no_chunk_exceeds_the_size_limit():
     for chunk in chunk_text(_long_text(), chunk_size=400, overlap=80):
         assert len(chunk.text) <= 400
@@ -51,7 +55,7 @@ def test_no_chunk_exceeds_the_size_limit():
 def test_consecutive_chunks_overlap():
     chunks = chunk_text(_long_text(), chunk_size=400, overlap=120)
     assert len(chunks) > 1
-    for previous, following in zip(chunks, chunks[1:]):
+    for previous, following in pairwise(chunks):
         assert following.start_char < previous.end_char
 
 
@@ -71,8 +75,9 @@ def test_whole_document_is_covered():
 
 # boundary preference
 
+
 def test_prefers_paragraph_boundaries():
-    text = "\n\n".join("Абзац номер %d з достатньою кількістю тексту." % i for i in range(12))
+    text = "\n\n".join(f"Абзац номер {i} з достатньою кількістю тексту." for i in range(12))
     chunks = chunk_text(text, chunk_size=120, overlap=20)
     # a chunk that broke at a paragraph ends with a full sentence, not mid-word
     assert all(chunk.text.endswith(".") or chunk is chunks[-1] for chunk in chunks)
@@ -86,6 +91,7 @@ def test_does_not_split_mid_word_when_a_space_is_available():
 
 
 # edge cases
+
 
 def test_short_text_is_one_chunk():
     chunks = chunk_text("Короткий текст без розривів.")
@@ -129,6 +135,7 @@ def test_chunks_never_contain_only_whitespace():
 
 
 # argument validation
+
 
 def test_overlap_must_be_smaller_than_chunk_size():
     with pytest.raises(ValueError):

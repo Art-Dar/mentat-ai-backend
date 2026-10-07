@@ -14,7 +14,7 @@ _WHITESPACE = re.compile(r"\s")
 
 @dataclass(frozen=True)
 class TextChunk:
-    index: int # 0-based position within the document
+    index: int  # 0-based position within the document
     text: str  # [start_char:end_char]
     start_char: int
     end_char: int

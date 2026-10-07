@@ -6,11 +6,13 @@ import logging
 import uuid
 from hashlib import sha256
 
+from sqlalchemy import delete
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.db import AsyncSessionLocal
-from app.models import Document, DocumentSource, IngestionStatus
-from app.services.ingestion.normalization import normalize_text
-from app.models import Chunk
+from app.models import Chunk, Document, DocumentSource, IngestionStatus
 from app.services.ingestion.chunking import chunk_text
+from app.services.ingestion.normalization import normalize_text
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +66,7 @@ def _normalize(document: Document) -> None:
     document.content = result.text
     document.language = result.detected_language
     document.content_hash = sha256(result.text.encode("utf-8")).hexdigest()
+
 
 async def _rechunk(document: Document, db: AsyncSession) -> None:
     """Replace this document's chunks. Embeddings stay NULL until the
