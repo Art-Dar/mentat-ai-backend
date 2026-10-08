@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     jwt_secret: str
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60 * 24 * 7  # 1 week — two-user app, long-lived is fine
+    voyage_api_key: str
+    embedding_model: str = "voyage-4"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

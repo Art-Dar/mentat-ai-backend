@@ -72,3 +72,13 @@ poetry run pytest            # tests
 * Lint  `` poetry run ruff check . ``
 * Lint + autofix `` poetry run ruff check . --fix ``
 * Format `` poetry run ruff format . ``
+
+### Text Embeddings
+Model: voyage-4
+Plan: 0.06$ / million tokens 
+Free start: basic 200 million free tokens on register
+
+| Document | Chunks | Tokens | Cost if paid |
+| --- | --- | --- | --- |
+| Short note (2k chars) | 3 | ~900 | $0.00005 |
+| Blog post (8k) | 10 | ~3,000 | $0.0002 |
