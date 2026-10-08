@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 
 from pydantic import Field, HttpUrl, field_validator
-from app.schemas.base import RequestSchemal
+from app.schemas.base import RequestSchema
 
 from app.models import DocumentSource, IngestionStatus
 
@@ -15,7 +15,7 @@ SUPPORTED_SOURCES = frozenset(
 MAX_TEXT_LENGTH = 1_000_000
 
 
-class IngestRequest(RequestSchemal):
+class IngestRequest(RequestSchema):
     source: DocumentSource
     text: str = Field(min_length=1, max_length=MAX_TEXT_LENGTH)
     url: HttpUrl | None = None
@@ -33,6 +33,6 @@ class IngestRequest(RequestSchemal):
         return value
 
 
-class IngestResponse(RequestSchemal):
+class IngestResponse(RequestSchema):
     document_id: uuid.UUID
     status: IngestionStatus

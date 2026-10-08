@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from app.schemas.base import RequestSchemal
+from app.schemas.base import RequestSchema
 
 
 class LoginRequest(RequestSchema):
