@@ -1,4 +1,4 @@
-'''
+"""
 Every error leaving the API — validation, domain, database, or a bug — comes
 back in one shape:
 
@@ -10,7 +10,7 @@ back in one shape:
         "request_id": "3f9c1e2a"
       }
     }
-'''
+"""
 
 import logging
 import uuid
@@ -68,7 +68,7 @@ class Forbidden(AppError):
 
 
 class InvalidRequest(AppError):
-    #Input that is well-formed but semantically wrong for this operation.
+    # Input that is well-formed but semantically wrong for this operation.
     status_code = 422
     code = "invalid_request"
     message = "Request could not be processed"
@@ -124,10 +124,12 @@ async def handle_app_error(request: Request, exc: AppError) -> JSONResponse:
 
 
 async def handle_http_exception(request: Request, exc: StarletteHTTPException) -> JSONResponse:
-    #FastAPI's own HTTPException, so existing raises keep working
+    # FastAPI's own HTTPException, so existing raises keep working
     code = _HTTP_CODES.get(exc.status_code, "http_error")
     message = exc.detail if isinstance(exc.detail, str) else "Request failed"
-    return _error_response(request, exc.status_code, code, message, headers=getattr(exc, "headers", None))
+    return _error_response(
+        request, exc.status_code, code, message, headers=getattr(exc, "headers", None)
+    )
 
 
 async def handle_validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
@@ -141,8 +143,8 @@ async def handle_validation_error(request: Request, exc: RequestValidationError)
 
 
 async def handle_integrity_error(request: Request, exc: IntegrityError) -> JSONResponse:
-    #constraint rejected the write — usually a duplicate.
-    #Reported as 409 rather than 500 because the caller can act on it
+    # constraint rejected the write — usually a duplicate.
+    # Reported as 409 rather than 500 because the caller can act on it
     logger.warning("integrity error: %s", exc.orig, extra={"request_id": _request_id(request)})
     return _error_response(
         request,
@@ -186,9 +188,8 @@ _HTTP_CODES = {
 }
 
 
-
 def register_error_handling(app: FastAPI) -> None:
-    #attach the request-id middleware and every exception handler
+    # attach the request-id middleware and every exception handler
 
     @app.middleware("http")
     async def attach_request_id(request: Request, call_next):

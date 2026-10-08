@@ -2,9 +2,9 @@ import uuid
 from datetime import datetime
 
 from pydantic import Field, HttpUrl, field_validator
-from app.schemas.base import RequestSchema
 
 from app.models import DocumentSource, IngestionStatus
+from app.schemas.base import RequestSchema
 
 # Source types this endpoint currently accepts. IMAGE and PDF need the media
 
