@@ -90,6 +90,7 @@ def _error_response(
     code: str,
     message: str,
     details: list[dict[str, Any]] | None = None,
+    headers: dict[str, str] | None = None,
 ) -> JSONResponse:
     body: dict[str, Any] = {
         "error": {
@@ -101,11 +102,11 @@ def _error_response(
     if details:
         body["error"]["details"] = details
 
-    return JSONResponse(
-        status_code=status_code,
-        content=body,
-        headers={REQUEST_ID_HEADER: _request_id(request)},
-    )
+    response_headers = {REQUEST_ID_HEADER: _request_id(request)}
+    if headers:
+        response_headers.update(headers)
+
+    return JSONResponse(status_code=status_code, content=body, headers=response_headers)
 
 
 def _safe_validation_details(exc: RequestValidationError) -> list[dict[str, Any]]:
@@ -126,7 +127,7 @@ async def handle_http_exception(request: Request, exc: StarletteHTTPException) -
     #FastAPI's own HTTPException, so existing raises keep working
     code = _HTTP_CODES.get(exc.status_code, "http_error")
     message = exc.detail if isinstance(exc.detail, str) else "Request failed"
-    return _error_response(request, exc.status_code, code, message)
+    return _error_response(request, exc.status_code, code, message, headers=getattr(exc, "headers", None))
 
 
 async def handle_validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
