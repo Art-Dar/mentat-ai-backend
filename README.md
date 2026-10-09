@@ -68,8 +68,21 @@ poetry run pytest            # tests
 * Testing ingest: `` poetry run pytest tests/test_ingest.py -v``
 * Testing chunking: `` poetry run pytest tests/test_chunking.py -v ``
 * Testing error handling: ``poetry run pytest tests/test_errors.py -v``
+* Testing embeddings: ``poetry run test/test_embedder.py -v``
+* Testing integration pipeline: `` poetry run pytest test/integration -v``
+* Testing integration pipeline (save records): ``poetry run pytest tests/integration -q --keep-rows``
 
 ### Ruff
 * Lint  `` poetry run ruff check . ``
 * Lint + autofix `` poetry run ruff check . --fix ``
 * Format `` poetry run ruff format . ``
+
+### Text Embeddings
+Model: voyage-4
+Plan: 0.06$ / million tokens 
+Free start: basic 200 million free tokens on register
+
+| Document | Chunks | Tokens | Cost if paid |
+| --- | --- | --- | --- |
+| Short note (2k chars) | 3 | ~900 | $0.00005 |
+| Blog post (8k) | 10 | ~3,000 | $0.0002 |

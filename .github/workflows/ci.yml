@@ -30,6 +30,7 @@ jobs:
       ENVIRONMENT: ci
       DEBUG: false
       JWT_SECRET: ci-test-secret-not-for-production
+      VOYAGE_API_KEY: ci-dummy-key-no-real-calls-are-made
 
     steps:
       - uses: actions/checkout@v4

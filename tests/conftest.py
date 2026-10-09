@@ -16,7 +16,7 @@ from app.models.user import AuthIdentity, AuthProvider, User
 # engine with asyncio.run() in a fixture causes cross-event-loop asyncpg
 # errors ("another operation is in progress"). A sync engine sidesteps
 # event loops entirely for fixture-side data setup.
-_sync_engine = create_engine(settings.database_url.replace("+asyncpg", ""))
+_sync_engine = create_engine(settings.database_url.replace("+asyncpg", "+psycopg2"))
 
 
 @pytest.fixture(scope="session")
@@ -52,3 +52,12 @@ def seeded_user(db_session):
 
     db_session.delete(user)
     db_session.commit()
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--keep-rows",
+        action="store_true",
+        default=False,
+        help="Leave integration-test rows in the database for inspection.",
+    )
