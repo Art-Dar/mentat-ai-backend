@@ -41,6 +41,7 @@ async def process_document(
             return
 
         document.status = IngestionStatus.PROCESSING
+        document.error_message = None
         await db.commit()
 
         try:
