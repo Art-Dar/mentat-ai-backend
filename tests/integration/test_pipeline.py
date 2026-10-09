@@ -1,5 +1,5 @@
-#The ingestion pipeline against a real database.
-#integration tests
+# The ingestion pipeline against a real database.
+# integration tests
 
 import uuid
 
