@@ -1,4 +1,4 @@
-#Nothing here touches the network:
+# Nothing here touches the network:
 # VoyageEmbedder takes an injectable client,so batching, retry and shape validation
 # are all exercised against stubs.
 

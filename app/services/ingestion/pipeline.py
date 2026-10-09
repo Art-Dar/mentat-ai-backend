@@ -13,8 +13,8 @@ from app.core.config import settings
 from app.core.db import AsyncSessionLocal
 from app.models import Chunk, Document, DocumentSource, IngestionStatus
 from app.services.ingestion.chunking import chunk_text
-from app.services.ingestion.normalization import normalize_text
 from app.services.ingestion.embedder import Embedder, get_embedder
+from app.services.ingestion.normalization import normalize_text
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +29,8 @@ _NORMALIZER_SOURCE = {
 
 
 async def process_document(
-        document_id: uuid.UUID,
-        embedder: Embedder | None = None,
+    document_id: uuid.UUID,
+    embedder: Embedder | None = None,
 ) -> None:
     # normalize -> chunk and embed document
 

@@ -34,6 +34,7 @@ _BACKOFF_BASE_SECONDS = 1.0
 class EmbeddingError(RuntimeError):
     """Embedding could not be produced. Recorded on the document row."""
 
+
 class Embedder(Protocol):
     """What the pipeline needs. Implemented by Voyage and by the test fake."""
 
@@ -46,11 +47,11 @@ class VoyageEmbedder:
     """Embedder backed by the Voyage API."""
 
     def __init__(
-            self,
-            client: voyageai.AsyncClient | None = None,
-            model: str | None = None,
-            dimension: int = EMBEDDING_DIM,
-            batch_size: int = BATCH_SIZE,
+        self,
+        client: voyageai.AsyncClient | None = None,
+        model: str | None = None,
+        dimension: int = EMBEDDING_DIM,
+        batch_size: int = BATCH_SIZE,
     ) -> None:
         # The client is injectable so tests can pass a stub without patching.
         if client is None:
@@ -70,7 +71,7 @@ class VoyageEmbedder:
 
         vectors: list[list[float]] = []
         for start in range(0, len(texts), self._batch_size):
-            batch = texts[start: start + self._batch_size]
+            batch = texts[start : start + self._batch_size]
             vectors.extend(await self._embed(batch, input_type="document"))
 
         if len(vectors) != len(texts):
