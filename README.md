@@ -67,6 +67,7 @@ poetry run pytest            # tests
 * Testing auth (login + token validation): `` poetry run pytest tests/test_auth.py tests/test_security.py -v ``
 * Testing ingest: `` poetry run pytest tests/test_ingest.py -v``
 * Testing chunking: `` poetry run pytest tests/test_chunking.py -v ``
+* Testing error handling: ``poetry run pytest tests/test_errors.py -v``
 * Testing embeddings: ``poetry run test/test_embedder.py -v``
 * Testing integration pipeline: `` poetry run pytest test/integration -v``
 * Testing integration pipeline (save records): ``poetry run pytest tests/integration -q --keep-rows``
