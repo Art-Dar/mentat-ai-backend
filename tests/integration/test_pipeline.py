@@ -46,7 +46,7 @@ class BrokenEmbedder:
 
 
 @pytest.fixture
-async def pipeline_user():
+async def pipeline_user(keep_rows):
     """A user to own the test documents, removed afterwards."""
     email = f"pipeline-{uuid.uuid4().hex[:8]}@example.com"
     async with AsyncSessionLocal() as db:
@@ -63,6 +63,9 @@ async def pipeline_user():
         user_id = user.id
 
     yield user_id
+    if keep_rows:
+        print(f"\n--keep-rows: user {user_id} left in the database")
+        return
 
     async with AsyncSessionLocal() as db:
         await db.execute(delete(User).where(User.id == user_id))
@@ -70,7 +73,7 @@ async def pipeline_user():
 
 
 @pytest.fixture
-async def captured(pipeline_user):
+async def captured(pipeline_user, keep_rows):
     """
     Factory for documents in the state /ingest leaves them: PENDING, raw
     text in `content`, nothing else done.
@@ -96,7 +99,8 @@ async def captured(pipeline_user):
             return document.id
 
     yield make
-
+    if keep_rows:
+        return
     async with AsyncSessionLocal() as db:
         await db.execute(delete(Document).where(Document.id.in_(created)))
         await db.commit()
