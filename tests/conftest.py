@@ -52,3 +52,12 @@ def seeded_user(db_session):
 
     db_session.delete(user)
     db_session.commit()
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--keep-rows",
+        action="store_true",
+        default=False,
+        help="Leave integration-test rows in the database for inspection.",
+    )
