@@ -71,6 +71,7 @@ poetry run pytest            # tests
 * Testing embeddings: ``poetry run test/test_embedder.py -v``
 * Testing integration pipeline: `` poetry run pytest test/integration -v``
 * Testing integration pipeline (save records): ``poetry run pytest tests/integration -q --keep-rows``
+* Testing vector search: `` poetry run pytest tests/integration/test_search.py -v ``
 
 ### Ruff
 * Lint  `` poetry run ruff check . ``
