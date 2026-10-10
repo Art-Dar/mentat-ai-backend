@@ -8,7 +8,7 @@ from app.core.deps import get_current_user
 from app.models import Document
 from app.schemas.ingest import IngestRequest, IngestResponse
 
-router = APIRouter(prefix="/ingest", tags=["ingest"])
+router = APIRouter(prefix="/ingest")
 
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=IngestResponse)
