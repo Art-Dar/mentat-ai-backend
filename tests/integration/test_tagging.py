@@ -359,6 +359,7 @@ async def test_replacing_with_nothing_clears_only_auto_tags(document):
 
 # reads
 
+
 @pytest.mark.anyio
 async def test_tags_for_a_document_come_back_sorted(document):
     async with AsyncSessionLocal() as db:

@@ -6,7 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.db import get_db
 from app.core.deps import get_current_user
 from app.models import Document, TagAssignedBy
-from app.schemas.tags import AttachTagsRequestAttachTagsRequest, DocumentTagRead, TagRead, TagWithCount
+from app.schemas.tags import (
+    AttachTagsRequestAttachTagsRequest,
+    DocumentTagRead,
+    TagRead,
+    TagWithCount,
+)
 from app.services.tagging.tags import (
     TagError,
     attach_tags,
@@ -49,8 +54,8 @@ def _as_links(rows) -> list[DocumentTagRead]:
 
 @router.get("/tags", response_model=list[TagWithCount])
 async def read_tags(
-        db: AsyncSession = Depends(get_db),
-        _: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(get_current_user),
 ) -> list[TagWithCount]:
     """Every tag with its usage count, most used first."""
     return [
@@ -61,9 +66,9 @@ async def read_tags(
 
 @router.get("/documents/{document_id}/tags", response_model=list[DocumentTagRead])
 async def read_document_tags(
-        document_id: uuid.UUID,
-        db: AsyncSession = Depends(get_db),
-        _: str = Depends(get_current_user),
+    document_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(get_current_user),
 ) -> list[DocumentTagRead]:
     await _require_document(db, document_id)
     return _as_links(await tags_for_document(db, document_id))
@@ -75,10 +80,10 @@ async def read_document_tags(
     status_code=status.HTTP_201_CREATED,
 )
 async def add_document_tags(
-        document_id: uuid.UUID,
-        payload: AttachTagsRequestAttachTagsRequest,
-        db: AsyncSession = Depends(get_db),
-        _: str = Depends(get_current_user),
+    document_id: uuid.UUID,
+    payload: AttachTagsRequestAttachTagsRequest,
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(get_current_user),
 ) -> list[DocumentTagRead]:
     """
     Attach tags, creating any that do not exist yet.
@@ -107,10 +112,10 @@ async def add_document_tags(
 
 @router.delete("/documents/{document_id}/tags", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_document_tag(
-        document_id: uuid.UUID,
-        name: str = Query(min_length=1, description="Tag name; matched case-insensitively"),
-        db: AsyncSession = Depends(get_db),
-        _: str = Depends(get_current_user),
+    document_id: uuid.UUID,
+    name: str = Query(min_length=1, description="Tag name; matched case-insensitively"),
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(get_current_user),
 ) -> Response:
     """
     Detach one tag. The Tag row itself survives — it is probably on other

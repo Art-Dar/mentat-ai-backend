@@ -1,8 +1,9 @@
 import uuid
 
 from pydantic import BaseModel, ConfigDict, Field
-from app.schemas.base import RequestSchema
+
 from app.models import TagAssignedBy
+from app.schemas.base import RequestSchema
 
 # Upper bound on one request. Auto-tagging produces a handful; a person
 # applies one or two. Twenty is generous and stops a malformed client from
