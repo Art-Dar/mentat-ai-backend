@@ -25,7 +25,7 @@ from app.services.tagging.tags import (
 # older versions. 422 is neither.
 _UNPROCESSABLE = 422
 
-router = APIRouter(prefix="/tags")
+router = APIRouter()
 
 
 async def _require_document(db: AsyncSession, document_id: uuid.UUID) -> Document:
