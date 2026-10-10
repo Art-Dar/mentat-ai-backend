@@ -21,17 +21,13 @@ USERS = [
 ]
 
 
-USERS = [
-    (os.environ["SEED_USER_1_EMAIL"], os.environ["SEED_USER_1_PASSWORD"]),
-    (os.environ["SEED_USER_2_EMAIL"], os.environ["SEED_USER_2_PASSWORD"]),
-]
-
-
 async def seed() -> None:
     async with AsyncSessionLocal() as db:
-        for email, password in USERS:
-            existing = await db.execute(select(User).where(User.email == email))
-            if existing.scalar_one_or_none() is not None:
+        for raw_email, password in USERS:
+            # same normalization as the login endpoint
+            email = raw_email.strip().lower()
+            existing = await db.scalar(select(User).where(User.email == email))
+            if existing is not None:
                 print(f"skip: {email} already exists")
                 continue
 
