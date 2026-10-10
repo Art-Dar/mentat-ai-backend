@@ -68,3 +68,4 @@ extend-immutable-calls = [
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+markers = ["runs_pipeline: runs the real ingestion pipeline with a fake embedder"]
