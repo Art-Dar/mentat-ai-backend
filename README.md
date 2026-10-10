@@ -63,12 +63,15 @@ poetry run pytest            # tests
 * Use the token on protected routes: `Authorization: Bearer <access_token>` header
 
 ### Test
+Docker container up **_NOT_** required:
 * Testing text normalization: `` poetry run pytest tests/test_normalizer.py -v ``
-* Testing auth (login + token validation): `` poetry run pytest tests/test_auth.py tests/test_security.py -v ``
-* Testing ingest: `` poetry run pytest tests/test_ingest.py -v``
 * Testing chunking: `` poetry run pytest tests/test_chunking.py -v ``
 * Testing error handling: ``poetry run pytest tests/test_errors.py -v``
 * Testing embeddings: ``poetry run test/test_embedder.py -v``
+
+Docker container up required:
+* Testing ingest: `` poetry run pytest tests/test_ingest.py -v``
+* Testing auth (login + token validation): `` poetry run pytest tests/test_auth.py tests/test_security.py -v ``
 * Testing integration pipeline: `` poetry run pytest test/integration -v``
 * Testing integration pipeline (save records): ``poetry run pytest tests/integration -q --keep-rows``
 * Testing vector search: `` poetry run pytest tests/integration/test_search.py -v ``
