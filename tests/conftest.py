@@ -61,3 +61,30 @@ def pytest_addoption(parser):
         default=False,
         help="Leave integration-test rows in the database for inspection.",
     )
+
+
+@pytest.fixture(autouse=True)
+def pipeline_isolation(request, monkeypatch):
+    """
+    Starlette's TestClient runs background tasks before `client.post`
+    returns, so without this every /ingest test would run a full pipeline —
+    and call the real Voyage API from CI, with a dummy key, over the
+    network. Tests marked `runs_pipeline` get a FakeEmbedder instead, so
+    they exercise the real wiring without leaving the machine.
+    """
+    if request.node.get_closest_marker("runs_pipeline"):
+        from app.services.ingestion.fake_embedder import FakeEmbedder
+
+        monkeypatch.setattr("app.services.ingestion.pipeline.get_embedder", lambda: FakeEmbedder())
+        yield None
+        return
+
+    scheduled = []
+
+    async def record(document_id, background_tasks=None):
+        # The BackgroundTasks instance is recorded too, so a test can prove
+        # the endpoint handed off instead of awaiting the pipeline inline.
+        scheduled.append((document_id, background_tasks))
+
+    monkeypatch.setattr("app.api.v1.ingest.schedule_processing", record)
+    yield scheduled

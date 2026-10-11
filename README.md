@@ -68,6 +68,7 @@ Docker container up **_NOT_** required:
 * Testing chunking: `` poetry run pytest tests/test_chunking.py -v ``
 * Testing error handling: ``poetry run pytest tests/test_errors.py -v``
 * Testing embeddings: ``poetry run test/test_embedder.py -v``
+* Testing scheduler: `` poetry run pytest tests/test_scheduler.py -v  ``
 
 Docker container up required:
 * Testing ingest: `` poetry run pytest tests/test_ingest.py -v``
@@ -75,6 +76,7 @@ Docker container up required:
 * Testing integration pipeline: `` poetry run pytest test/integration -v``
 * Testing integration pipeline (save records): ``poetry run pytest tests/integration -q --keep-rows``
 * Testing vector search: `` poetry run pytest tests/integration/test_search.py -v ``
+* Testing background work of the ingest pipeline: ``poetry run pytest tests/test_ingest_background.py -v``
 
 ### Ruff
 * Lint  `` poetry run ruff check . ``
