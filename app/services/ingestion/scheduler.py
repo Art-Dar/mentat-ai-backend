@@ -9,8 +9,8 @@ logger = logging.getLogger(__name__)
 
 
 async def schedule_processing(
-        document_id: uuid.UUID,
-        background_tasks: BackgroundTasks | None = None,
+    document_id: uuid.UUID,
+    background_tasks: BackgroundTasks | None = None,
 ) -> None:
     """
     Arrange for `document_id` to be processed after the response is sent.
