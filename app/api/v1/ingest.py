@@ -1,12 +1,13 @@
 import uuid
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
 from app.core.deps import get_current_user
 from app.models import Document
 from app.schemas.ingest import IngestRequest, IngestResponse
+from app.services.ingestion.scheduler import schedule_processing
 
 router = APIRouter(prefix="/ingest")
 
@@ -14,6 +15,7 @@ router = APIRouter(prefix="/ingest")
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=IngestResponse)
 async def ingest(
     payload: IngestRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user_id: str = Depends(get_current_user),
 ) -> IngestResponse:
@@ -37,5 +39,9 @@ async def ingest(
     db.add(document)
     await db.commit()
     await db.refresh(document)
+
+    # AFTER the commit, deliberately. The task opens its own session and
+    # would not see an uncommitted row.
+    await schedule_processing(document.id, background_tasks)
 
     return IngestResponse(document_id=document.id, status=document.status)
