@@ -2,7 +2,7 @@ import uuid
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -52,6 +52,20 @@ def seeded_user(db_session):
 
     db_session.delete(user)
     db_session.commit()
+
+
+@pytest.fixture
+def register_email(db_session):
+    """A unique email for /auth/register tests; the user it creates, if any,
+    is removed afterwards."""
+    email = f"register-{uuid.uuid4().hex[:8]}@example.com"
+
+    yield email
+
+    user = db_session.scalar(select(User).where(User.email == email))
+    if user is not None:
+        db_session.delete(user)
+        db_session.commit()
 
 
 def pytest_addoption(parser):
