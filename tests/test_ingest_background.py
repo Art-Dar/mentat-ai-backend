@@ -147,7 +147,7 @@ def test_by_default_endpoint_tests_do_not_run_the_pipeline(client, auth_headers,
 
 
 def test_the_endpoint_hands_off_instead_of_awaiting(
-        client, auth_headers, db_session, pipeline_isolation
+    client, auth_headers, db_session, pipeline_isolation
 ):
     """
     responds immediately instead of blocking on the full pipeline
