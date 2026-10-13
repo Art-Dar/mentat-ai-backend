@@ -55,11 +55,11 @@ class VoyageEmbedder:
     ) -> None:
         # The client is injectable so tests can pass a stub without patching.
         if client is None:
-            if not settings.voyage_api_key:
+            if not settings.voyage_api_key.get_secret_value():
                 # Caught here, not letting the SDK send an unauthenticated
                 # request (missing setting instead of 401 from else's service)
                 raise EmbeddingError("VOYAGE_API_KEY is not set")
-            client = voyageai.AsyncClient(api_key=settings.voyage_api_key)
+            client = voyageai.AsyncClient(api_key=settings.voyage_api_key.get_secret_value())
         self._client = client
         self._model = model or settings.embedding_model
         self._dimension = dimension

@@ -101,9 +101,9 @@ class GroqTagger:
         max_tags: int = MAX_TAGS,
     ) -> None:
         if client is None:
-            if not settings.groq_api_key:
+            if not settings.groq_api_key.get_secret_value():
                 raise TaggingError("GROQ_API_KEY is not set")
-            client = groq.AsyncGroq(api_key=settings.groq_api_key)
+            client = groq.AsyncGroq(api_key=settings.groq_api_key.get_secret_value())
         self._client = client
         self._model = model or settings.tagging_model
         self._max_tags = max_tags
