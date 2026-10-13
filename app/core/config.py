@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 60 * 24 * 7  # 1 week — two-user app, long-lived is fine
     voyage_api_key: str
     embedding_model: str = "voyage-4"
+    groq_api_key: str = ""
+    tagging_model: str = "openai/gpt-oss-20b"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
