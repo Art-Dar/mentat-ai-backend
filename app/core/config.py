@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 60 * 24 * 7  # 1 week — two-user app, long-lived is fine
     voyage_api_key: str
     embedding_model: str = "voyage-4"
+    google_client_id: str
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

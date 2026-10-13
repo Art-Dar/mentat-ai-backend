@@ -13,7 +13,6 @@
 .ruff_cache
 
 tests
-README.md
 LICENSE
 
 Dockerfile

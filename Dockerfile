@@ -3,7 +3,7 @@
 # ---- builder: resolve deps into a venv with Poetry ----
 FROM python:3.12-slim AS builder
 
-ENV POETRY_VERSION=2.2.1 \
+ENV POETRY_VERSION=2.5.1 \
     POETRY_HOME=/opt/poetry \
     POETRY_VIRTUALENVS_IN_PROJECT=true \
     POETRY_NO_INTERACTION=1 \
@@ -15,8 +15,9 @@ ENV PATH="${POETRY_HOME}/bin:${PATH}"
 WORKDIR /app
 
 # Copy only the dependency manifest first so this layer stays cached
-# while app code changes.
-COPY pyproject.toml poetry.lock ./
+# while app code changes. README.md is included too since [project] in
+# pyproject.toml declares it and `poetry check` validates it exists.
+COPY pyproject.toml poetry.lock README.md ./
 RUN poetry check --lock \
     && poetry install --no-root --only main
 
