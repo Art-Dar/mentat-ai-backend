@@ -5,6 +5,7 @@ Auto-tagging inside the real pipeline, against a real database.
 import uuid
 
 import pytest
+from pydantic import SecretStr
 from sqlalchemy import delete, func, select
 
 from app.core.db import AsyncSessionLocal
@@ -235,11 +236,11 @@ async def test_a_tagging_failure_leaves_the_embeddings_intact(captured):
 @pytest.mark.anyio
 async def test_no_api_key_costs_the_tags_not_the_document(captured, monkeypatch):
     """
-    anthropic_api_key is optional, unlike voyage_api_key. Passing no
-    tagger makes the pipeline build the real one, which refuses without a
-    key — and that refusal is absorbed.
+    groq_api_key is optional, unlike voyage_api_key. Passing no tagger
+    makes the pipeline build the real one, which refuses without a key —
+    and that refusal is absorbed.
     """
-    monkeypatch.setattr("app.services.tagging.auto_tagger.settings.anthropic_api_key", "")
+    monkeypatch.setattr("app.services.tagging.auto_tagger.settings.groq_api_key", SecretStr(""))
     document_id = await captured()
 
     await process_document(document_id, embedder=FakeEmbedder())

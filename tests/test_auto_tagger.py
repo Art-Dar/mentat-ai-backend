@@ -3,6 +3,7 @@ import json
 import groq
 import httpx
 import pytest
+from pydantic import SecretStr
 
 from app.services.tagging.auto_tagger import (
     MAX_CHARS_FOR_TAGGING,
@@ -304,7 +305,7 @@ async def test_a_bad_api_key_is_not_retried():
 
 @pytest.mark.anyio
 async def test_missing_api_key_names_the_setting(monkeypatch):
-    monkeypatch.setattr("app.services.tagging.auto_tagger.settings.groq_api_key", "")
+    monkeypatch.setattr("app.services.tagging.auto_tagger.settings.groq_api_key", SecretStr(""))
 
     with pytest.raises(TaggingError, match="GROQ_API_KEY"):
         GroqTagger()
