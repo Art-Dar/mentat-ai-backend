@@ -6,12 +6,12 @@ import logging
 import uuid
 from hashlib import sha256
 
-from sqlalchemy import delete, select, func
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.db import AsyncSessionLocal
-from app.models import Chunk, Document, DocumentSource, IngestionStatus, Tag, DocumentTag
+from app.models import Chunk, Document, DocumentSource, DocumentTag, IngestionStatus, Tag
 from app.services.ingestion.chunking import chunk_text
 from app.services.ingestion.embedder import Embedder, get_embedder
 from app.services.ingestion.normalization import normalize_text
@@ -129,6 +129,7 @@ async def _record_failure(db: AsyncSession, document_id: uuid.UUID, exc: Excepti
     document.error_message = str(exc)[:1000]
     await db.commit()
 
+
 async def _popular_tag_names(db, limit=VOCABULARY_LIMIT) -> list[str]:
     # The most-used existing tags, offered to Claude as reuse candidates.
     result = await db.execute(
@@ -139,6 +140,7 @@ async def _popular_tag_names(db, limit=VOCABULARY_LIMIT) -> list[str]:
         .limit(limit)
     )
     return list(result.scalars().all())
+
 
 async def _assign_tags(document, db, tagger=None) -> None:
     # ask llm for topic tags and store them as AUTO assignments.
