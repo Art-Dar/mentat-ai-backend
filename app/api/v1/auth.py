@@ -19,6 +19,7 @@ from app.schemas.auth import (
     GoogleAuthRequest,
     LoginRequest,
     RegisterRequest,
+    SetPasswordRequest,
     TokenResponse,
 )
 
@@ -29,17 +30,29 @@ router = APIRouter(prefix="/auth")
 async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db)):
     email = payload.email.strip().lower()
 
-    existing = await db.scalar(
-        select(AuthIdentity).where(
-            AuthIdentity.provider == AuthProvider.PASSWORD,
-            AuthIdentity.provider_user_id == email,
+    # Check for any existing *user* with this email, not just a password
+    # identity — otherwise someone could attach a password to an email
+    # that already has a Google-only account, without proving they
+    # control it. That account already exists; it just doesn't have a
+    # password yet, which is what /auth/set-password is for (and that one
+    # requires being authenticated as that user already).
+    existing_user = await db.scalar(select(User).where(User.email == email))
+    if existing_user is not None:
+        has_password = await db.scalar(
+            select(AuthIdentity).where(
+                AuthIdentity.provider == AuthProvider.PASSWORD,
+                AuthIdentity.provider_user_id == email,
+            )
         )
-    )
-    if existing is not None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="An account with that email already exists",
+        detail = (
+            "An account with that email already exists"
+            if has_password is not None
+            else (
+                "An account with that email already exists. Log in with "
+                "Google, then set a password from your account."
+            )
         )
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
 
     user = User(email=email, email_verified=False)
     user.identities.append(
@@ -162,3 +175,39 @@ async def connect_google(
     await db.commit()
 
     return ConnectResponse(provider="google")
+
+
+@router.post("/set-password", response_model=ConnectResponse, status_code=status.HTTP_201_CREATED)
+async def set_password(
+    payload: SetPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user_id: str = Depends(get_current_user),
+):
+    """Add email+password sign-in to an account that doesn't have it yet —
+    e.g. one created via Google. Optional: nothing requires a Google-signed-up
+    user to ever call this."""
+    user = await db.get(User, uuid.UUID(current_user_id))
+
+    existing = await db.scalar(
+        select(AuthIdentity).where(
+            AuthIdentity.provider == AuthProvider.PASSWORD,
+            AuthIdentity.provider_user_id == user.email,
+        )
+    )
+    if existing is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="You already have a password set",
+        )
+
+    db.add(
+        AuthIdentity(
+            user_id=user.id,
+            provider=AuthProvider.PASSWORD,
+            provider_user_id=user.email,
+            password_hash=hash_password(payload.password),
+        )
+    )
+    await db.commit()
+
+    return ConnectResponse(provider="password")

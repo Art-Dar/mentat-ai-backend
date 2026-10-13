@@ -84,6 +84,31 @@ def test_register_password_too_short(client, register_email):
     assert response.status_code == 422
 
 
+def test_register_rejects_email_already_used_by_google_account(
+    client, db_session, seeded_google_user
+):
+    email, _ = seeded_google_user
+
+    response = client.post(
+        "/api/v1/auth/register",
+        json={"email": email, "password": "correct-horse-battery-staple"},
+    )
+
+    assert response.status_code == 409
+    # no password got attached, and no duplicate user was created
+    users = db_session.scalars(select(User).where(User.email == email)).all()
+    assert len(users) == 1
+    assert (
+        db_session.scalar(
+            select(AuthIdentity).where(
+                AuthIdentity.provider == AuthProvider.PASSWORD,
+                AuthIdentity.provider_user_id == email,
+            )
+        )
+        is None
+    )
+
+
 def _mock_google_token(monkeypatch, claims: dict):
     monkeypatch.setattr("app.api.v1.auth.verify_google_id_token", lambda token: claims)
 
@@ -235,5 +260,65 @@ def test_google_request_rejects_both_token_types(client):
 
 def test_google_request_rejects_neither_token_type(client):
     response = client.post("/api/v1/auth/google", json={})
+
+    assert response.status_code == 422
+
+
+def test_set_password_lets_google_user_log_in_with_a_password_afterwards(
+    client, seeded_google_user, monkeypatch
+):
+    email, google_sub = seeded_google_user
+    _mock_google_token(monkeypatch, {"sub": google_sub, "email": email, "email_verified": True})
+    login = client.post("/api/v1/auth/google", json={"id_token": "whatever"})
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    response = client.post(
+        "/api/v1/auth/set-password",
+        json={"password": "correct-horse-battery-staple"},
+        headers=headers,
+    )
+
+    assert response.status_code == 201
+    assert response.json() == {"provider": "password", "connected": True}
+
+    # the whole point: password login now works for this account
+    password_login = client.post(
+        "/api/v1/auth/login",
+        json={"email": email, "password": "correct-horse-battery-staple"},
+    )
+    assert password_login.status_code == 200
+
+
+def test_set_password_rejects_if_already_has_one(client, seeded_user):
+    email, password = seeded_user
+    login = client.post("/api/v1/auth/login", json={"email": email, "password": password})
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    response = client.post(
+        "/api/v1/auth/set-password",
+        json={"password": "another-correct-horse-battery"},
+        headers=headers,
+    )
+
+    assert response.status_code == 409
+
+
+def test_set_password_requires_auth(client):
+    response = client.post(
+        "/api/v1/auth/set-password", json={"password": "correct-horse-battery-staple"}
+    )
+
+    assert response.status_code == 401
+
+
+def test_set_password_too_short(client, seeded_google_user, monkeypatch):
+    email, google_sub = seeded_google_user
+    _mock_google_token(monkeypatch, {"sub": google_sub, "email": email, "email_verified": True})
+    login = client.post("/api/v1/auth/google", json={"id_token": "whatever"})
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    response = client.post(
+        "/api/v1/auth/set-password", json={"password": "short1"}, headers=headers
+    )
 
     assert response.status_code == 422

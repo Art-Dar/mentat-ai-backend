@@ -13,6 +13,10 @@ class RegisterRequest(RequestSchema):
     password: str = Field(min_length=8)
 
 
+class SetPasswordRequest(RequestSchema):
+    password: str = Field(min_length=8)
+
+
 class GoogleAuthRequest(RequestSchema):
     # id_token: a Google Identity Services / OAuth Playground credential.
     # access_token: what chrome.identity.getAuthToken returns — the Chrome
