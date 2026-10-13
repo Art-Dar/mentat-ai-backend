@@ -309,7 +309,7 @@ async def test_a_tag_shared_by_two_documents_is_one_row(captured):
             await db.execute(
                 select(func.count(DocumentTag.document_id))
                 .join(Tag, Tag.id == DocumentTag.tag_id)
-                .where(Tag.name == "at:Shared")
+                .where(Tag.name == "at:Shared", DocumentTag.document_id.in_([first, second]))
             )
         ).scalar_one()
 
