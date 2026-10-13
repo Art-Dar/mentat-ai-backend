@@ -31,6 +31,7 @@ jobs:
       DEBUG: false
       JWT_SECRET: ci-test-secret-not-for-production
       VOYAGE_API_KEY: ci-dummy-key-no-real-calls-are-made
+      GOOGLE_CLIENT_ID: ci-dummy-client-id.apps.googleusercontent.com
 
     steps:
       - uses: actions/checkout@v4
