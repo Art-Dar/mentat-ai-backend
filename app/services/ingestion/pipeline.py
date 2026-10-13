@@ -6,15 +6,17 @@ import logging
 import uuid
 from hashlib import sha256
 
-from sqlalchemy import delete
+from sqlalchemy import delete, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.db import AsyncSessionLocal
-from app.models import Chunk, Document, DocumentSource, IngestionStatus
+from app.models import Chunk, Document, DocumentSource, IngestionStatus, Tag, DocumentTag
 from app.services.ingestion.chunking import chunk_text
 from app.services.ingestion.embedder import Embedder, get_embedder
 from app.services.ingestion.normalization import normalize_text
+from app.services.tagging.auto_tagger import VOCABULARY_LIMIT, Tagger, get_tagger
+from app.services.tagging.tags import attach_tags, replace_auto_tags
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +33,7 @@ _NORMALIZER_SOURCE = {
 async def process_document(
     document_id: uuid.UUID,
     embedder: Embedder | None = None,
+    tagger: Tagger | None = None,
 ) -> None:
     # normalize -> chunk and embed document
 
@@ -48,7 +51,7 @@ async def process_document(
             _normalize(document)
             chunks = await _rechunk(document, db)
             await _embed(chunks, embedder or get_embedder())
-            # assign_tags(document)                              <- Story 5.1
+            await _assign_tags(document, db, tagger)
             document.status = IngestionStatus.COMPLETED
             document.error_message = None
         except Exception as exc:
@@ -125,3 +128,49 @@ async def _record_failure(db: AsyncSession, document_id: uuid.UUID, exc: Excepti
     document.status = IngestionStatus.FAILED
     document.error_message = str(exc)[:1000]
     await db.commit()
+
+async def _popular_tag_names(db, limit=VOCABULARY_LIMIT) -> list[str]:
+    # The most-used existing tags, offered to Claude as reuse candidates.
+    result = await db.execute(
+        select(Tag.name)
+        .outerjoin(DocumentTag, DocumentTag.tag_id == Tag.id)
+        .group_by(Tag.id)
+        .order_by(func.count(DocumentTag.document_id).desc(), func.lower(Tag.name))
+        .limit(limit)
+    )
+    return list(result.scalars().all())
+
+async def _assign_tags(document, db, tagger=None) -> None:
+    # ask llm for topic tags and store them as AUTO assignments.
+    try:
+        async with db.begin_nested():
+            resolved = tagger or get_tagger()
+            vocabulary = await _popular_tag_names(db)
+
+            suggestions = await resolved.suggest_tags(
+                title=document.title,
+                text=document.content or "",
+                vocabulary=vocabulary,
+            )
+
+            # Clear the previous pass's guesses, keeping anything the user
+            # applied by hand, then attach each suggestion with its own
+            # score — replace_auto_tags takes a single confidence, which is
+            # why the two steps are separate here.
+            await replace_auto_tags(db, document.id, [])
+            for suggestion in suggestions:
+                await attach_tags(
+                    db,
+                    document.id,
+                    [suggestion.name],
+                    confidence=suggestion.confidence,
+                )
+
+        logger.info("tagged document %s with %d tags", document.id, len(suggestions))
+    except Exception:
+        logger.warning(
+            "auto-tagging failed for document %s; it keeps its embeddings and "
+            "can be re-tagged later",
+            document.id,
+            exc_info=True,
+        )
