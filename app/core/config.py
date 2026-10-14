@@ -1,3 +1,4 @@
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,6 +14,11 @@ class Settings(BaseSettings):
     voyage_api_key: str
     embedding_model: str = "voyage-4"
     google_client_id: str
+    storage_bucket: str = "mentat-dev"
+    storage_endpoint_url: str = ""
+    storage_access_key: str = ""
+    storage_secret_key: SecretStr = SecretStr("")
+    storage_region: str = "auto"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
