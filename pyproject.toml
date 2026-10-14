@@ -23,6 +23,7 @@ dependencies = [
     "voyageai (>=0.5.0,<0.6.0)",
     "google-auth (>=2.62.0,<3.0.0)",
     "httpx (>=0.28.1,<0.29.0)",
+    "pypdf (>=6.20.1,<7.0.0)",
 ]
 
 [tool.poetry]
@@ -36,7 +37,8 @@ build-backend = "poetry.core.masonry.api"
 dev = [
     "pytest (>=9.1.1,<10.0.0)",
     "ruff (>=0.16.8,<0.17.0)",
-    "anyio (>=4.15.1,<5.0.0)"
+    "anyio (>=4.15.1,<5.0.0)",
+    "reportlab (>=5.0.1,<6.0.0)"
 ]
 
 [tool.ruff]
