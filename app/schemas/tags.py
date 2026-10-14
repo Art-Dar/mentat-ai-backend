@@ -9,6 +9,7 @@ from app.schemas.base import RequestSchema
 # applies one or two. Twenty is generous and stops a malformed client from
 # posting a thousand names in a loop.
 MAX_TAGS_PER_REQUEST = 20
+from app.services.tagging.tags import MAX_TAG_NAME_LENGTH
 
 
 class TagRead(BaseModel):
@@ -37,6 +38,16 @@ class DocumentTagRead(BaseModel):
     confidence: float | None
 
 
-class AttachTagsRequestAttachTagsRequest(RequestSchema):
+class AttachTagsRequest(RequestSchema):
     names: list[str] = Field(min_length=1, max_length=MAX_TAGS_PER_REQUEST)
     model_config = ConfigDict(extra="forbid")
+
+
+class RenameTagRequest(RequestSchema):
+    name: str = Field(min_length=1, max_length=MAX_TAG_NAME_LENGTH)
+
+
+class TagRenameResponse(BaseModel):
+    tag: TagRead
+    merged_into: uuid.UUID | None
+    documents_affected: int
