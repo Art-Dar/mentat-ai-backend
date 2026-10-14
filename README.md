@@ -79,6 +79,7 @@ Docker container up required:
 * Testing vector search: `` poetry run pytest tests/integration/test_search.py -v ``
 * Testing background work of the ingest pipeline: ``poetry run pytest tests/test_ingest_background.py -v``
 * Testing tags pipeline tagging (save records): `` poetry run pytest tests/integration/test_pipeline_tagging.py -q --keep-rows``
+* Testing tag rename: ``poetry run pytest tests/integration/test_tag_rename.py -v``
 
 ### Ruff
 * Lint  `` poetry run ruff check . ``
