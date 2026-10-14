@@ -69,4 +69,7 @@ extend-immutable-calls = [
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
-markers = ["runs_pipeline: runs the real ingestion pipeline with a fake embedder"]
+markers = [
+    "runs_pipeline: ...",
+    "real_providers: build the real Voyage/Groq providers instead of fakes",
+]
