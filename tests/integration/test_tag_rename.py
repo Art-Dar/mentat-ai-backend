@@ -239,9 +239,7 @@ async def test_merge_does_not_duplicate_a_document_that_had_both(make_document):
     async with AsyncSessionLocal() as db:
         count = (
             await db.execute(
-                select(func.count())
-                .select_from(DocumentTag)
-                .where(DocumentTag.tag_id == target_id)
+                select(func.count()).select_from(DocumentTag).where(DocumentTag.tag_id == target_id)
             )
         ).scalar_one()
     assert count == 1
