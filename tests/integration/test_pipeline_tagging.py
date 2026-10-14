@@ -232,6 +232,7 @@ async def test_a_tagging_failure_leaves_the_embeddings_intact(captured):
     assert await chunk_count(document_id) > 0
     assert await links(document_id) == []
 
+
 @pytest.mark.real_providers
 @pytest.mark.anyio
 async def test_no_api_key_costs_the_tags_not_the_document(captured, monkeypatch):
