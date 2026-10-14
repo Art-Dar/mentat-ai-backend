@@ -7,11 +7,14 @@ from app.core.db import get_db
 from app.core.deps import get_current_user
 from app.models import Document, TagAssignedBy
 from app.schemas.tags import (
-    AttachTagsRequestAttachTagsRequest,
+    AttachTagsRequest,
     DocumentTagRead,
+    RenameTagRequest,
     TagRead,
+    TagRenameResponse,
     TagWithCount,
 )
+from app.services.tagging.rename import TagNotFound, rename_tag
 from app.services.tagging.tags import (
     TagError,
     attach_tags,
@@ -64,6 +67,42 @@ async def read_tags(
     ]
 
 
+@router.patch("/tags/{tag_id}", response_model=TagRenameResponse)
+async def rename_vocabulary_tag(
+    tag_id: uuid.UUID,
+    payload: RenameTagRequest,
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(get_current_user),
+) -> TagRenameResponse:
+    """
+    Rename a tag across the whole vocabulary, merging it into an existing
+    tag when the new name is already taken.
+    """
+    try:
+        result = await rename_tag(db, tag_id, payload.name)
+    # TagNotFound before TagError: it is a subclass, so the order decides
+    # whether a missing tag is a 404 or a 422.
+    except TagNotFound as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tag not found",
+        ) from exc
+    except TagError as exc:
+        raise HTTPException(
+            status_code=_UNPROCESSABLE,
+            detail=str(exc),
+        ) from exc
+
+    await db.commit()
+    # Readable after the commit because the sessionmaker sets
+    # expire_on_commit=False; otherwise this would re-query per attribute.
+    return TagRenameResponse(
+        tag=TagRead.model_validate(result.tag),
+        merged_into=result.merged_into,
+        documents_affected=result.documents_affected,
+    )
+
+
 @router.get("/documents/{document_id}/tags", response_model=list[DocumentTagRead])
 async def read_document_tags(
     document_id: uuid.UUID,
@@ -81,7 +120,7 @@ async def read_document_tags(
 )
 async def add_document_tags(
     document_id: uuid.UUID,
-    payload: AttachTagsRequestAttachTagsRequest,
+    payload: AttachTagsRequest,
     db: AsyncSession = Depends(get_db),
     _: str = Depends(get_current_user),
 ) -> list[DocumentTagRead]:
