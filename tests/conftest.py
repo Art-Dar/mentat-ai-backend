@@ -2,7 +2,7 @@ import uuid
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -49,6 +49,43 @@ def seeded_user(db_session):
     db_session.commit()
 
     yield email, password
+
+    db_session.delete(user)
+    db_session.commit()
+
+
+@pytest.fixture
+def register_email(db_session):
+    """A unique email for /auth/register tests; the user it creates, if any,
+    is removed afterwards."""
+    email = f"register-{uuid.uuid4().hex[:8]}@example.com"
+
+    yield email
+
+    user = db_session.scalar(select(User).where(User.email == email))
+    if user is not None:
+        db_session.delete(user)
+        db_session.commit()
+
+
+@pytest.fixture
+def seeded_google_user(db_session):
+    """A user already linked to a Google identity, for /auth/google tests."""
+    email = f"google-{uuid.uuid4().hex[:8]}@example.com"
+    google_sub = f"google-sub-{uuid.uuid4().hex[:8]}"
+
+    user = User(email=email, email_verified=True)
+    user.identities.append(
+        AuthIdentity(
+            provider=AuthProvider.GOOGLE,
+            provider_user_id=google_sub,
+            password_hash=None,
+        )
+    )
+    db_session.add(user)
+    db_session.commit()
+
+    yield email, google_sub
 
     db_session.delete(user)
     db_session.commit()

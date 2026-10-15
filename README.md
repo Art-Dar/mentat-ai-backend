@@ -58,9 +58,16 @@ poetry run pytest            # tests
 * Show current migration heads	`` poetry run alembic heads ``
 
 ### Auth
-* Seed the two Mentat users (reads `SEED_USER_1_USERNAME`/`SEED_USER_1_PASSWORD`, `SEED_USER_2_USERNAME`/`SEED_USER_2_PASSWORD` from `.env`): `` poetry run python scripts/seed_users.py ``
-* Login: `` POST /api/v1/auth/login `` with body `{"username": "...", "password": "..."}` → returns `{"access_token": "...", "token_type": "bearer"}`
+* Seed the two Mentat users (reads `SEED_USER_1_EMAIL`/`SEED_USER_1_PASSWORD`, `SEED_USER_2_EMAIL`/`SEED_USER_2_PASSWORD` from `.env`): `` poetry run python scripts/seed_users.py ``
+* Register: `` POST /api/v1/auth/register `` with body `{"email": "...", "password": "..."}` (password: 8+ chars) → `201` + `{"access_token": "...", "token_type": "bearer"}`. `409` if that email is already registered, `422` if the password is too short.
+* Login: `` POST /api/v1/auth/login `` with body `{"email": "...", "password": "..."}` → returns `{"access_token": "...", "token_type": "bearer"}`
 * Use the token on protected routes: `Authorization: Bearer <access_token>` header
+
+#### Google sign-in
+Requires `GOOGLE_CLIENT_ID` in `.env` (a Google Cloud OAuth 2.0 Client ID — "Chrome extension" type for the real frontend).
+* `` POST /api/v1/auth/google `` — body is exactly one of `{"id_token": "..."}` (a Google Identity Services / OAuth Playground credential) or `{"access_token": "..."}` (what `chrome.identity.getAuthToken` returns). Logs in if that Google identity is already linked; creates a new user on first sign-in. `409` if the email is already registered under a different identity (password, most likely) — log in that way first, then connect Google explicitly. `401` on an invalid/expired token.
+* `` POST /api/v1/auth/google/connect `` — same body shape, requires `Authorization: Bearer <access_token>`. Links that Google identity to the signed-in user. `201` on success, `409` if that Google identity is already connected to any account.
+* `` POST /api/v1/auth/set-password `` — the reverse: lets a Google-only account add password sign-in. Requires `Authorization: Bearer <access_token>`, body `{"password": "..."}` (8+ chars). Optional — nothing requires it. `201` on success, `409` if the account already has a password, `422` if too short.
 
 ### Test
 Docker container up **_NOT_** required:

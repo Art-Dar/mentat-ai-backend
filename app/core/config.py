@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     embedding_model: str = "voyage-4"
     groq_api_key: SecretStr = ""
     tagging_model: str = "openai/gpt-oss-20b"
+    google_client_id: str
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
