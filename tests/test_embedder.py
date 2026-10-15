@@ -5,6 +5,7 @@
 
 import pytest
 import voyageai.error as voyage_error
+from pydantic import SecretStr
 
 from app.services.ingestion.embedder import (
     BATCH_SIZE,
@@ -228,7 +229,7 @@ async def test_fake_embedder_distinguishes_different_texts():
 
 @pytest.mark.anyio
 async def test_missing_api_key_names_the_setting(monkeypatch):
-    monkeypatch.setattr("app.services.ingestion.embedder.settings.voyage_api_key", "")
+    monkeypatch.setattr("app.services.ingestion.embedder.settings.voyage_api_key", SecretStr(""))
 
     with pytest.raises(EmbeddingError, match="VOYAGE_API_KEY"):
         VoyageEmbedder()

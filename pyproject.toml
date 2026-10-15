@@ -21,6 +21,7 @@ dependencies = [
     "python-jose[cryptography] (>=3.5.0,<4.0.0)",
     "alembic-postgresql-enum (>=1.10.0,<2.0.0)",
     "voyageai (>=0.5.0,<0.6.0)",
+    "groq (>=1.7.0,<2.0.0)",
     "google-auth (>=2.62.0,<3.0.0)",
     "httpx (>=0.28.1,<0.29.0)",
 ]
@@ -69,4 +70,7 @@ extend-immutable-calls = [
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
-markers = ["runs_pipeline: runs the real ingestion pipeline with a fake embedder"]
+markers = [
+    "runs_pipeline: ...",
+    "real_providers: build the real Voyage/Groq providers instead of fakes",
+]

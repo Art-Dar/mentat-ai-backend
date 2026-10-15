@@ -4,6 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.models import TagAssignedBy
 from app.schemas.base import RequestSchema
+from app.services.tagging.tags import MAX_TAG_NAME_LENGTH
 
 # Upper bound on one request. Auto-tagging produces a handful; a person
 # applies one or two. Twenty is generous and stops a malformed client from
@@ -37,6 +38,16 @@ class DocumentTagRead(BaseModel):
     confidence: float | None
 
 
-class AttachTagsRequestAttachTagsRequest(RequestSchema):
+class AttachTagsRequest(RequestSchema):
     names: list[str] = Field(min_length=1, max_length=MAX_TAGS_PER_REQUEST)
     model_config = ConfigDict(extra="forbid")
+
+
+class RenameTagRequest(RequestSchema):
+    name: str = Field(min_length=1, max_length=MAX_TAG_NAME_LENGTH)
+
+
+class TagRenameResponse(BaseModel):
+    tag: TagRead
+    merged_into: uuid.UUID | None
+    documents_affected: int

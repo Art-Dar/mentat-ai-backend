@@ -125,3 +125,8 @@ def pipeline_isolation(request, monkeypatch):
 
     monkeypatch.setattr("app.api.v1.ingest.schedule_processing", record)
     yield scheduled
+
+
+@pytest.fixture(scope="session")
+def anyio_backend():
+    return "asyncio"
