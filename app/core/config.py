@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 60 * 24 * 7  # 1 week — two-user app, long-lived is fine
     voyage_api_key: str
     embedding_model: str = "voyage-4"
-    google_client_id: str
+    google_client_id: str = ""
     storage_bucket: str = "mentat-dev"
     storage_endpoint_url: str = ""
     storage_access_key: str = ""

@@ -3,9 +3,9 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, Text, Integer
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db import Base
@@ -73,7 +73,7 @@ class Document(Base):
         back_populates="document", cascade="all, delete-orphan"
     )
 
-    storage_key: Mapped[str | None] = mapped_column(String(512), nullable=True, unique=True)
+    storage_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
     file_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
     original_filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
     page_map: Mapped[list[dict] | None] = mapped_column(JSONB, nullable=True)
