@@ -1,4 +1,5 @@
 import logging
+import re
 import uuid
 
 from fastapi import (
@@ -16,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.db import get_db
 from app.core.deps import get_current_user
 from app.models import Document, DocumentSource, IngestionStatus
-from app.schemas.files import FileIngestResponse, FileLinkResponse
+from app.schemas.files import FileIngestResponse, FileLinkResponse, ImageIngestResponse
 from app.services.ingestion.extractors.pdf import (
     MAX_PDF_BYTES,
     EncryptedPdfError,
@@ -31,6 +32,8 @@ from app.services.storage.base import (
     StorageError,
     storage_key,
 )
+from app.services.storage.ocr import OcrError, OcrEngineUnavailable, extract_image_text_async, MAX_IMAGE_BYTES, \
+    DEFAULT_LANGUAGE, MIN_CHARS
 from app.services.storage.s3_store import get_file_store
 
 logger = logging.getLogger(__name__)
@@ -63,6 +66,28 @@ _UNPROCESSABLE = 422
 _TOO_LARGE = 413
 _UNSUPPORTED_MEDIA = 415
 
+_IMAGE_MAGIC: tuple[tuple[bytes, str], ...] = (
+    (b"\x89PNG\r\n\x1a\n", "png"),
+    (b"\xff\xd8\xff", "jpg"),
+    (b"II*\x00", "tiff"),
+    (b"MM\x00*", "tiff"),
+)
+_ACCEPTED_IMAGES = "PNG, JPEG, WEBP or TIFF"
+
+# Tesseract language codes
+# three letters, joined by + for multi-language pages ("eng+ukr")
+_LANGUAGE_RE = re.compile(r"^[a-z]{3}(\+[a-z]{3})*$")
+
+def _image_extension(data: bytes) -> str | None:
+    """The file's real format, or None if it is not one we accept."""
+    for magic, extension in _IMAGE_MAGIC:
+        if data.startswith(magic):
+            return extension
+    # WEBP is a RIFF container: the format marker sits at offset 8, so it
+    # cannot be matched by a prefix like the others.
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "webp"
+    return None
 
 async def _read_capped(upload: UploadFile, limit: int) -> bytes:
     """
@@ -179,6 +204,132 @@ async def ingest_file(
         page_count=extraction.page_count,
         pages_needing_ocr=list(extraction.pages_needing_ocr),
         needs_ocr=extraction.needs_ocr,
+    )
+
+
+@router.post(
+    "/ingest/image",
+    response_model=ImageIngestResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def ingest_image(
+        background_tasks: BackgroundTasks,
+        file: UploadFile = File(...),
+        title: str | None = Form(default=None),
+        language: str = Form(default=DEFAULT_LANGUAGE),
+        db: AsyncSession = Depends(get_db),
+        current_user=Depends(get_current_user),
+        store: FileStore = Depends(get_file_store),
+) -> ImageIngestResponse:
+    """
+    Accept a scan or photo, OCR it, keep the original, queue the pipeline.
+    Retrieval is the same GET /documents/{id}/file the PDF path uses
+    """
+    user_id = _caller_id(current_user)
+
+    if not _LANGUAGE_RE.match(language):
+        raise HTTPException(
+            status_code=_UNPROCESSABLE,
+            detail="language must be a tesseract code such as 'eng' or 'eng+ukr'",
+        )
+
+    data = await _read_capped(file, MAX_IMAGE_BYTES)
+
+    extension = _image_extension(data)
+    if extension is None:
+        raise HTTPException(
+            status_code=_UNSUPPORTED_MEDIA,
+            detail=f"Only {_ACCEPTED_IMAGES} images are accepted here",
+        )
+
+    try:
+        extraction = await extract_image_text_async(data, language=language)
+    except OcrEngineUnavailable as exc:
+        # The upload was fine; the host is missing its tesseract binary or
+        # the engine hung. 503, not 422 — a retry may well succeed
+        logger.exception("OCR engine unavailable")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Text recognition is unavailable, please retry",
+        ) from exc
+    except OcrError as exc:
+        raise HTTPException(status_code=_UNPROCESSABLE, detail=str(exc)) from exc
+
+    if not extraction.has_text:
+        # Refused before anything is written. A document with no content
+        # would be invisible in search and indistinguishable from a failed
+        # upload, so it is better to tell the user now while they still
+        # have the receipt in their hand.
+        raise HTTPException(
+            status_code=_UNPROCESSABLE,
+            detail=(
+                f"No readable text found in this image "
+                f"(under {MIN_CHARS} characters). Try a sharper, "
+                f"straight-on photo in better light."
+            ),
+        )
+
+    document_id = uuid.uuid4()
+    key = storage_key(user_id, document_id, extension=extension)
+
+    try:
+        await store.put(key, data, content_type=file.content_type or f"image/{extension}")
+    except StorageError as exc:
+        logger.exception("could not store %s", key)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="File storage is unavailable, please retry",
+        ) from exc
+
+    document = Document(
+        id=document_id,
+        user_id=user_id,
+        source=DocumentSource.IMAGE,
+        content=extraction.text,
+        title=title or file.filename,
+        status=IngestionStatus.PENDING,
+        storage_key=key,
+        file_size=len(data),
+        original_filename=file.filename,
+        # The per-word bounding boxes stay out of the database on purpose:
+        # a dense receipt is several hundred words, and nothing reads them
+        # yet. When the citation epic needs them they belong in their own
+        # table, not inflating every document row.
+        page_map=[
+            {
+                "index": 0,
+                "start_char": 0,
+                "end_char": len(extraction.text),
+                "needs_ocr": False,
+                "source": "ocr",
+                "language": extraction.language,
+                "word_count": extraction.word_count,
+                "mean_confidence": extraction.mean_confidence,
+            }
+        ],
+    )
+    db.add(document)
+
+    try:
+        await db.commit()
+    except Exception:
+        logger.exception("commit failed after storing %s, removing the object", key)
+        try:
+            await store.delete(key)
+        except StorageError:
+            logger.exception("could not remove orphaned object %s", key)
+        raise
+
+    await schedule_processing(document.id, background_tasks)
+
+    return ImageIngestResponse(
+        document_id=document.id,
+        status=document.status,
+        char_count=extraction.char_count,
+        word_count=extraction.word_count,
+        mean_confidence=extraction.mean_confidence,
+        low_confidence=extraction.is_low_confidence,
+        language=extraction.language,
     )
 
 
