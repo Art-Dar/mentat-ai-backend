@@ -24,6 +24,10 @@ dependencies = [
     "groq (>=1.7.0,<2.0.0)",
     "google-auth (>=2.62.0,<3.0.0)",
     "httpx (>=0.28.1,<0.29.0)",
+    "pypdf (>=6.20.1,<7.0.0)",
+    "boto3 (>=1.43.113,<2.0.0)",
+    "python-multipart (>=0.0.32,<0.0.33)",
+    "python-dotenv (>=1.2.4,<2.0.0)",
 ]
 
 [tool.poetry]
@@ -37,7 +41,10 @@ build-backend = "poetry.core.masonry.api"
 dev = [
     "pytest (>=9.1.1,<10.0.0)",
     "ruff (>=0.16.8,<0.17.0)",
-    "anyio (>=4.15.1,<5.0.0)"
+    "anyio (>=4.15.1,<5.0.0)",
+    "reportlab (>=5.0.1,<6.0.0)",
+    "moto[s3] (>=5.2.4,<6.0.0)",
+    "pillow (>=12.3.0,<13.0.0)"
 ]
 
 [tool.ruff]
@@ -62,6 +69,8 @@ extend-immutable-calls = [
     "fastapi.Path",
     "fastapi.Body",
     "fastapi.Header",
+    "fastapi.File",
+    "fastapi.Form",
 ]
 
 [tool.ruff.lint.per-file-ignores]

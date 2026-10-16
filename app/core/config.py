@@ -1,5 +1,9 @@
+from pathlib import Path
+
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
@@ -13,9 +17,14 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 60 * 24 * 7  # 1 week — two-user app, long-lived is fine
     voyage_api_key: SecretStr
     embedding_model: str = "voyage-4"
+    google_client_id: str = ""
     groq_api_key: SecretStr = ""
     tagging_model: str = "openai/gpt-oss-20b"
-    google_client_id: str
+    storage_bucket: str = "mentat-dev"
+    storage_endpoint_url: str = ""
+    storage_access_key: str = ""
+    storage_secret_key: SecretStr = SecretStr("")
+    storage_region: str = "auto"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

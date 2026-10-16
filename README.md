@@ -76,7 +76,10 @@ Docker container up **_NOT_** required:
 * Testing error handling: ``poetry run pytest tests/test_errors.py -v``
 * Testing embeddings: ``poetry run test/test_embedder.py -v``
 * Testing scheduler: `` poetry run pytest tests/test_scheduler.py -v  ``
-  * Testing auto tagging: `` poetry run pytest tests/test_auto_tagger.py -v``
+* Testing pdf extraction: ``poetry run pytest tests/test_pdf_extraction.py``
+* Test storage script (fake): ``poetry run pytest tests/test_storage.py``
+* Test pdf file ingestion: ``poetry run pytest tests/test_ingest_file.py``
+ * Testing auto tagging: `` poetry run pytest tests/test_auto_tagger.py -v``
 
 Docker container up required:
 * Testing ingest: `` poetry run pytest tests/test_ingest.py -v``
@@ -87,6 +90,8 @@ Docker container up required:
 * Testing background work of the ingest pipeline: ``poetry run pytest tests/test_ingest_background.py -v``
 * Testing tags pipeline tagging (save records): `` poetry run pytest tests/integration/test_pipeline_tagging.py -q --keep-rows``
 * Testing tag rename: ``poetry run pytest tests/integration/test_tag_rename.py -v``
+
+Manual run of the pdf processing and storing: ``poetry run python -m scripts.check_pdf_storage ingest docs\sample-invoice.pdf``
 
 ### Ruff
 * Lint  `` poetry run ruff check . ``
