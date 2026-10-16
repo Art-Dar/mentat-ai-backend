@@ -18,6 +18,14 @@ from app.core.db import get_db
 from app.core.deps import get_current_user
 from app.models import Document, DocumentSource, IngestionStatus
 from app.schemas.files import FileIngestResponse, FileLinkResponse, ImageIngestResponse
+from app.services.ingestion.extractors.ocr import (
+    DEFAULT_LANGUAGE,
+    MAX_IMAGE_BYTES,
+    MIN_CHARS,
+    OcrEngineUnavailable,
+    OcrError,
+    extract_image_text_async,
+)
 from app.services.ingestion.extractors.pdf import (
     MAX_PDF_BYTES,
     EncryptedPdfError,
@@ -32,8 +40,6 @@ from app.services.storage.base import (
     StorageError,
     storage_key,
 )
-from app.services.ingestion.extractors.ocr import OcrError, OcrEngineUnavailable, extract_image_text_async, MAX_IMAGE_BYTES, \
-    DEFAULT_LANGUAGE, MIN_CHARS
 from app.services.storage.s3_store import get_file_store
 
 logger = logging.getLogger(__name__)
@@ -66,27 +72,29 @@ _UNPROCESSABLE = 422
 _TOO_LARGE = 413
 _UNSUPPORTED_MEDIA = 415
 
-_IMAGE_MAGIC: tuple[tuple[bytes, str], ...] = (
-    (b"\x89PNG\r\n\x1a\n", "png"),
-    (b"\xff\xd8\xff", "jpg"),
-    (b"II*\x00", "tiff"),
-    (b"MM\x00*", "tiff"),
+_IMAGE_MAGIC: tuple[tuple[bytes, str, str], ...] = (
+    (b"\x89PNG\r\n\x1a\n", "png", "image/png"),
+    (b"\xff\xd8\xff", "jpg", "image/jpeg"),
+    (b"II*\x00", "tiff", "image/tiff"),
+    (b"MM\x00*", "tiff", "image/tiff"),
 )
+_WEBP = ("webp", "image/webp")
 _ACCEPTED_IMAGES = "PNG, JPEG, WEBP or TIFF"
 
 # Tesseract language codes
 # three letters, joined by + for multi-language pages ("eng+ukr")
 _LANGUAGE_RE = re.compile(r"^[a-z]{3}(\+[a-z]{3})*$")
 
-def _image_extension(data: bytes) -> str | None:
+
+def _image_format(data: bytes) -> tuple[str, str] | None:
     """The file's real format, or None if it is not one we accept."""
-    for magic, extension in _IMAGE_MAGIC:
+    for magic, extension, media_type in _IMAGE_MAGIC:
         if data.startswith(magic):
-            return extension
+            return extension, media_type
     # WEBP is a RIFF container: the format marker sits at offset 8, so it
     # cannot be matched by a prefix like the others.
     if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
-        return "webp"
+        return _WEBP
     return None
 
 async def _read_capped(upload: UploadFile, limit: int) -> bytes:
@@ -213,13 +221,13 @@ async def ingest_file(
     status_code=status.HTTP_201_CREATED,
 )
 async def ingest_image(
-        background_tasks: BackgroundTasks,
-        file: UploadFile = File(...),
-        title: str | None = Form(default=None),
-        language: str = Form(default=DEFAULT_LANGUAGE),
-        db: AsyncSession = Depends(get_db),
-        current_user=Depends(get_current_user),
-        store: FileStore = Depends(get_file_store),
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    title: str | None = Form(default=None),
+    language: str = Form(default=DEFAULT_LANGUAGE),
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+    store: FileStore = Depends(get_file_store),
 ) -> ImageIngestResponse:
     """
     Accept a scan or photo, OCR it, keep the original, queue the pipeline.
@@ -235,12 +243,13 @@ async def ingest_image(
 
     data = await _read_capped(file, MAX_IMAGE_BYTES)
 
-    extension = _image_extension(data)
-    if extension is None:
+    image_format = _image_format(data)
+    if image_format is None:
         raise HTTPException(
             status_code=_UNSUPPORTED_MEDIA,
             detail=f"Only {_ACCEPTED_IMAGES} images are accepted here",
         )
+    extension, media_type = image_format
 
     try:
         extraction = await extract_image_text_async(data, language=language)
@@ -273,7 +282,7 @@ async def ingest_image(
     key = storage_key(user_id, document_id, extension=extension)
 
     try:
-        await store.put(key, data, content_type=file.content_type or f"image/{extension}")
+        await store.put(key, data, content_type=media_type)
     except StorageError as exc:
         logger.exception("could not store %s", key)
         raise HTTPException(

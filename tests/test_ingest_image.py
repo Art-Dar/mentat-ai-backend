@@ -40,8 +40,8 @@ RECEIPT = ["ATB Market", "Chek 10482", "Razom: 349.50 UAH", "Data: 16.10.2026"]
 
 def _font(size: int = 34):
     for path in (
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-            "/usr/share/fonts/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/dejavu/DejaVuSans.ttf",
     ):
         try:
             return ImageFont.truetype(path, size)
@@ -184,6 +184,45 @@ def test_the_extension_comes_from_the_magic_bytes(upload, db_session, fmt, exten
     body = upload(photo(fmt=fmt), filename="receipt.png").json()
     document = db_session.get(Document, uuid.UUID(body["document_id"]))
     assert document.storage_key.endswith(f".{extension}")
+
+
+@needs_tesseract
+@pytest.mark.parametrize(
+    ("fmt", "media_type"),
+    [
+        ("PNG", "image/png"),
+        ("JPEG", "image/jpeg"),  # not image/jpg, which is not a real media type
+        ("WEBP", "image/webp"),
+        ("TIFF", "image/tiff"),
+    ],
+)
+def test_the_stored_media_type_comes_from_the_bytes(upload, db_session, store, fmt, media_type):
+    body = upload(photo(fmt=fmt)).json()
+    document = db_session.get(Document, uuid.UUID(body["document_id"]))
+    assert store.content_types[document.storage_key] == media_type
+
+
+@needs_tesseract
+def test_a_lying_client_content_type_is_ignored(client, auth_headers, db_session, store):
+    """
+    The stored media type is served back verbatim on the presigned URL, so
+    taking it from the request would let a client upload a PNG while
+    claiming text/html and have that HTML served from a URL this app hands
+    out. Stored XSS, delivered by us. The bytes decide.
+    """
+    response = client.post(
+        "/api/v1/ingest/image",
+        headers=auth_headers,
+        files={"file": ("receipt.png", photo(), "text/html")},
+    )
+    assert response.status_code == 201
+
+    document_id = uuid.UUID(response.json()["document_id"])
+    document = db_session.get(Document, document_id)
+    assert store.content_types[document.storage_key] == "image/png"
+
+    db_session.delete(document)
+    db_session.commit()
 
 
 @needs_tesseract
