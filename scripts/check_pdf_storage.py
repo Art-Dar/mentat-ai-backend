@@ -9,26 +9,26 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 os.chdir(PROJECT_ROOT)
 
-import argparse
-import asyncio
-import hashlib
-import uuid
+import argparse  # noqa: E402
+import asyncio  # noqa: E402
+import hashlib  # noqa: E402
+import uuid  # noqa: E402
 
-from sqlalchemy import select
+from sqlalchemy import select  # noqa: E402
 
-from app.core.config import settings
-from app.core.db import AsyncSessionLocal
-from app.models import Document, DocumentSource, IngestionStatus, User
-from app.services.ingestion.extractors.pdf import (
+from app.core.config import settings  # noqa: E402
+from app.core.db import AsyncSessionLocal  # noqa: E402
+from app.models import Document, DocumentSource, IngestionStatus, User  # noqa: E402
+from app.services.ingestion.extractors.pdf import (  # noqa: E402
     PdfExtractionError,
     extract_pdf_text_async,
 )
-from app.services.storage.base import (
+from app.services.storage.base import (  # noqa: E402
     ObjectNotFound,
     StorageError,
     storage_key,
 )
-from app.services.storage.s3_store import S3FileStore
+from app.services.storage.s3_store import S3FileStore  # noqa: E402
 
 """
 Prove that a real PDF goes into Cloudflare R2 and Postgres together, and
@@ -79,11 +79,12 @@ async def ingest(path: Path, email: str | None) -> None:
     except PdfExtractionError as exc:
         raise SystemExit(f"{BAD}extraction refused the file: {exc}") from exc
 
-    print(f"{OK}extracted {extraction.page_count} page(s), "
-          f"{len(extraction.text):,} chars")
+    print(f"{OK}extracted {extraction.page_count} page(s), {len(extraction.text):,} chars")
     if extraction.needs_ocr:
-        print(f"{INFO}pages needing OCR: {list(extraction.pages_needing_ocr)}"
-              f"{'  (every page — this is a scan)' if extraction.is_fully_scanned else ''}")
+        print(
+            f"{INFO}pages needing OCR: {list(extraction.pages_needing_ocr)}"
+            f"{'  (every page — this is a scan)' if extraction.is_fully_scanned else ''}"
+        )
     else:
         print(f"{INFO}every page has a usable text layer")
 
@@ -131,8 +132,9 @@ async def ingest(path: Path, email: str | None) -> None:
 
     print("\nverifying the two agree:\n")
     await _verify(document_id, expected=data)
-    print(f"\nclean up with:\n  poetry run python -m scripts.check_pdf_storage "
-          f"delete {document_id}\n")
+    print(
+        f"\nclean up with:\n  poetry run python -m scripts.check_pdf_storage delete {document_id}\n"
+    )
 
 
 async def _verify(document_id: uuid.UUID, expected: bytes | None = None) -> bool:
@@ -146,8 +148,10 @@ async def _verify(document_id: uuid.UUID, expected: bytes | None = None) -> bool
     if document is None:
         print(f"{BAD}no document row with that id")
         return False
-    print(f"{OK}row found: status={document.status.value} "
-          f"size={document.file_size:,} pages={len(document.page_map or [])}")
+    print(
+        f"{OK}row found: status={document.status.value} "
+        f"size={document.file_size:,} pages={len(document.page_map or [])}"
+    )
 
     if not document.storage_key:
         print(f"{BAD}the row has no storage_key — nothing points at an object")
@@ -166,8 +170,7 @@ async def _verify(document_id: uuid.UUID, expected: bytes | None = None) -> bool
     print(f"{OK}object fetched back, {len(fetched):,} bytes, sha256 {_digest(fetched)}")
 
     if document.file_size != len(fetched):
-        print(f"{BAD}file_size on the row ({document.file_size}) != object "
-              f"({len(fetched)})")
+        print(f"{BAD}file_size on the row ({document.file_size}) != object ({len(fetched)})")
         good = False
 
     if expected is not None:
@@ -180,7 +183,7 @@ async def _verify(document_id: uuid.UUID, expected: bytes | None = None) -> bool
     # The guarantee citations rely on: page offsets index the stored text.
     content = document.content or ""
     for page in document.page_map or []:
-        slice_ = content[page["start_char"]: page["end_char"]]
+        slice_ = content[page["start_char"] : page["end_char"]]
         if len(slice_) != page["end_char"] - page["start_char"]:
             print(f"{BAD}page {page['index']} offsets fall outside content")
             good = False
@@ -208,13 +211,17 @@ async def show(document_id: uuid.UUID) -> None:
 async def listing(limit: int) -> None:
     async with AsyncSessionLocal() as db:
         rows = (
-            await db.execute(
-                select(Document)
-                .where(Document.storage_key.is_not(None))
-                .order_by(Document.created_at.desc())
-                .limit(limit)
+            (
+                await db.execute(
+                    select(Document)
+                    .where(Document.storage_key.is_not(None))
+                    .order_by(Document.created_at.desc())
+                    .limit(limit)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
     if not rows:
         print("\nNo documents with a stored file yet.\n")
@@ -222,9 +229,11 @@ async def listing(limit: int) -> None:
 
     print(f"\n{'id':38} {'status':11} {'pages':>5} {'size':>10}  title")
     for d in rows:
-        print(f"{str(d.id):38} {d.status.value:11} "
-              f"{len(d.page_map or []):>5} {d.file_size or 0:>10,}  "
-              f"{(d.title or '')[:30]}")
+        print(
+            f"{str(d.id):38} {d.status.value:11} "
+            f"{len(d.page_map or []):>5} {d.file_size or 0:>10,}  "
+            f"{(d.title or '')[:30]}"
+        )
     print()
 
 
