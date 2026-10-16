@@ -32,7 +32,7 @@ from app.services.storage.base import (
     StorageError,
     storage_key,
 )
-from app.services.storage.ocr import OcrError, OcrEngineUnavailable, extract_image_text_async, MAX_IMAGE_BYTES, \
+from app.services.ingestion.extractors.ocr import OcrError, OcrEngineUnavailable, extract_image_text_async, MAX_IMAGE_BYTES, \
     DEFAULT_LANGUAGE, MIN_CHARS
 from app.services.storage.s3_store import get_file_store
 
