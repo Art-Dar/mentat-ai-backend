@@ -101,8 +101,7 @@ def _load(path: Path) -> tuple[bytes, str, str]:
             "would answer 415 for this file too."
         )
     extension, media_type = image_format
-    print(f"\nfile   {path.name}  ({len(data):,} bytes, {extension}, "
-          f"sha256 {_digest(data)})")
+    print(f"\nfile   {path.name}  ({len(data):,} bytes, {extension}, sha256 {_digest(data)})")
     return data, extension, media_type
 
 
@@ -142,16 +141,20 @@ def _report(extraction) -> None:
     """What OCR made of the image, in the terms the API reports."""
     confidence = extraction.mean_confidence
     shown = f"{confidence:.1f}" if confidence is not None else "n/a"
-    print(f"{OK}recognised {extraction.word_count} word(s), "
-          f"{extraction.char_count} chars, mean confidence {shown}")
+    print(
+        f"{OK}recognised {extraction.word_count} word(s), "
+        f"{extraction.char_count} chars, mean confidence {shown}"
+    )
     print(f"{INFO}language: {extraction.language}")
 
     if not extraction.has_text:
         print(f"{BAD}under {MIN_CHARS} characters — the endpoint would answer 422")
         print(f"{INFO}try a sharper, straight-on photo in better light")
     elif extraction.is_low_confidence:
-        print(f"{WARN}below the {LOW_CONFIDENCE} confidence threshold: accepted, "
-              f"but flagged to the client as low_confidence")
+        print(
+            f"{WARN}below the {LOW_CONFIDENCE} confidence threshold: accepted, "
+            f"but flagged to the client as low_confidence"
+        )
     else:
         print(f"{OK}clean read — the endpoint would accept this without a warning")
 
@@ -163,12 +166,16 @@ def _show_text(extraction, *, boxes: int) -> None:
 
     if boxes and extraction.words:
         worst = sorted(extraction.words, key=lambda w: w.confidence)[:boxes]
-        print(f"\nthe {len(worst)} least confident words "
-              f"(these are what a citation would point at):\n")
+        print(
+            f"\nthe {len(worst)} least confident words "
+            f"(these are what a citation would point at):\n"
+        )
         print(f"  {'word':24} {'conf':>6}  {'x':>5} {'y':>5} {'w':>5} {'h':>5}")
         for word in worst:
-            print(f"  {word.text[:24]:24} {word.confidence:6.1f}  "
-                  f"{word.left:5} {word.top:5} {word.width:5} {word.height:5}")
+            print(
+                f"  {word.text[:24]:24} {word.confidence:6.1f}  "
+                f"{word.left:5} {word.top:5} {word.width:5} {word.height:5}"
+            )
 
 
 async def read(path: Path, language: str, boxes: int) -> None:
@@ -202,8 +209,7 @@ async def ingest(path: Path, email: str | None, language: str) -> None:
 
     if not extraction.has_text:
         raise SystemExit(
-            f"\n{INFO}Nothing stored. The endpoint refuses before writing, so "
-            f"this script does too."
+            f"\n{INFO}Nothing stored. The endpoint refuses before writing, so this script does too."
         )
 
     store = S3FileStore()
@@ -252,8 +258,9 @@ async def ingest(path: Path, email: str | None, language: str) -> None:
     print("\nverifying the three agree:\n")
     await _verify(document_id, expected=data)
     _show_text(extraction, boxes=0)
-    print(f"\nclean up with:\n  poetry run python -m scripts.check_image_ocr "
-          f"delete {document_id}\n")
+    print(
+        f"\nclean up with:\n  poetry run python -m scripts.check_image_ocr delete {document_id}\n"
+    )
 
 
 async def _verify(document_id: uuid.UUID, expected: bytes | None = None) -> bool:
@@ -269,8 +276,10 @@ async def _verify(document_id: uuid.UUID, expected: bytes | None = None) -> bool
     if document.source != DocumentSource.IMAGE:
         print(f"{WARN}that document is a {document.source.value}, not an image")
 
-    print(f"{OK}row found: status={document.status.value} "
-          f"size={document.file_size:,} chars={len(document.content or '')}")
+    print(
+        f"{OK}row found: status={document.status.value} "
+        f"size={document.file_size:,} chars={len(document.content or '')}"
+    )
 
     if not document.storage_key:
         print(f"{BAD}the row has no storage_key — nothing points at an object")
@@ -321,15 +330,17 @@ async def _verify(document_id: uuid.UUID, expected: bytes | None = None) -> bool
         good = False
     else:
         entry = entries[0]
-        if content[entry["start_char"]: entry["end_char"]] != content:
+        if content[entry["start_char"] : entry["end_char"]] != content:
             print(f"{BAD}page_map offsets do not cover the stored content")
             good = False
         else:
             confidence = entry.get("mean_confidence")
             shown = f"{confidence:.1f}" if confidence is not None else "n/a"
-            print(f"{OK}page_map covers the content "
-                  f"({entry.get('word_count')} words, confidence {shown}, "
-                  f"source={entry.get('source')})")
+            print(
+                f"{OK}page_map covers the content "
+                f"({entry.get('word_count')} words, confidence {shown}, "
+                f"source={entry.get('source')})"
+            )
 
     try:
         url = await store.url_for(document.storage_key, expires_in=900)
@@ -351,14 +362,18 @@ async def show(document_id: uuid.UUID) -> None:
 async def listing(limit: int) -> None:
     async with AsyncSessionLocal() as db:
         rows = (
-            await db.execute(
-                select(Document)
-                .where(Document.source == DocumentSource.IMAGE)
-                .where(Document.storage_key.is_not(None))
-                .order_by(Document.created_at.desc())
-                .limit(limit)
+            (
+                await db.execute(
+                    select(Document)
+                    .where(Document.source == DocumentSource.IMAGE)
+                    .where(Document.storage_key.is_not(None))
+                    .order_by(Document.created_at.desc())
+                    .limit(limit)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
     if not rows:
         print("\nNo image documents with a stored file yet.\n")
@@ -369,9 +384,11 @@ async def listing(limit: int) -> None:
         entry = (d.page_map or [{}])[0]
         confidence = entry.get("mean_confidence")
         shown = f"{confidence:.1f}" if isinstance(confidence, int | float) else "n/a"
-        print(f"{str(d.id):38} {d.status.value:11} {shown:>6} "
-              f"{entry.get('word_count', 0):>6} {d.file_size or 0:>10,}  "
-              f"{(d.title or '')[:28]}")
+        print(
+            f"{str(d.id):38} {d.status.value:11} {shown:>6} "
+            f"{entry.get('word_count', 0):>6} {d.file_size or 0:>10,}  "
+            f"{(d.title or '')[:28]}"
+        )
     print()
 
 

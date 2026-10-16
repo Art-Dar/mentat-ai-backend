@@ -257,9 +257,7 @@ def test_a_rotated_phone_photo_is_straightened_first():
     threshold would catch it; the only defence is honouring the tag.
     """
     upright = extract_image_text(scan(["Razom: 349.50 UAH"], fmt="JPEG"))
-    rotated = extract_image_text(
-        scan(["Razom: 349.50 UAH"], fmt="JPEG", exif_orientation=6)
-    )
+    rotated = extract_image_text(scan(["Razom: 349.50 UAH"], fmt="JPEG", exif_orientation=6))
 
     assert "349.50" in upright.text
     assert "349.50" in rotated.text, "the EXIF orientation tag was ignored"

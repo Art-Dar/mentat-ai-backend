@@ -165,7 +165,7 @@ def test_the_page_map_describes_the_ocr_pass(upload, db_session):
     assert entry["needs_ocr"] is False
     assert entry["start_char"] == 0
     assert entry["end_char"] == len(document.content)
-    assert document.content[entry["start_char"]: entry["end_char"]] == document.content
+    assert document.content[entry["start_char"] : entry["end_char"]] == document.content
     assert entry["language"] == "eng"
     assert entry["word_count"] == body["word_count"]
 
@@ -226,9 +226,7 @@ def test_a_lying_client_content_type_is_ignored(client, auth_headers, db_session
 
 
 @needs_tesseract
-def test_the_stored_image_is_retrievable_through_the_file_endpoint(
-        upload, client, auth_headers
-):
+def test_the_stored_image_is_retrievable_through_the_file_endpoint(upload, client, auth_headers):
     """The GET endpoint is shared with the PDF path and needs no changes."""
     document_id = upload().json()["document_id"]
 
@@ -262,9 +260,7 @@ def test_authentication_is_required(client):
     assert response.status_code in (401, 403)
 
 
-@pytest.mark.parametrize(
-    "language", ["english", "EN", "../../etc/passwd", "eng;rm -rf /", "eng+"]
-)
+@pytest.mark.parametrize("language", ["english", "EN", "../../etc/passwd", "eng;rm -rf /", "eng+"])
 def test_a_malformed_language_code_is_refused(upload, language):
     response = upload(data={"language": language})
     assert response.status_code == 422
@@ -291,9 +287,7 @@ def test_an_empty_language_field_falls_back_to_the_default(upload):
 
 
 def _fake_extraction(text: str, confidence: float = 90.0) -> OcrExtraction:
-    words = tuple(
-        OcrWord(word, confidence, 0, 0, 10, 10) for word in text.split() if word
-    )
+    words = tuple(OcrWord(word, confidence, 0, 0, 10, 10) for word in text.split() if word)
     return OcrExtraction(text=text, words=words, language="eng")
 
 
@@ -371,14 +365,18 @@ def test_storage_failure_leaves_no_row_behind(upload, broken_store, monkeypatch,
 
     monkeypatch.setattr("app.api.v1.files.extract_image_text_async", fine)
 
-    before = db_session.execute(
-        select(Document).where(Document.source == DocumentSource.IMAGE)
-    ).scalars().all()
+    before = (
+        db_session.execute(select(Document).where(Document.source == DocumentSource.IMAGE))
+        .scalars()
+        .all()
+    )
 
     response = upload()
     assert response.status_code == 503
 
-    after = db_session.execute(
-        select(Document).where(Document.source == DocumentSource.IMAGE)
-    ).scalars().all()
+    after = (
+        db_session.execute(select(Document).where(Document.source == DocumentSource.IMAGE))
+        .scalars()
+        .all()
+    )
     assert len(after) == len(before)

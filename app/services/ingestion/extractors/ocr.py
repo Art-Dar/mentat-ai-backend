@@ -146,9 +146,7 @@ def _engine_failure(exc: RuntimeError, language: str) -> OcrError:
     # language 'ukr' ... Could not initialize tesseract." The pack is not
     # installed; the upload was never the problem.
     if "failed loading language" in message or "could not initialize tesseract" in message:
-        return OcrEngineUnavailable(
-            f"the '{language}' language pack is not installed on this host"
-        )
+        return OcrEngineUnavailable(f"the '{language}' language pack is not installed on this host")
 
     return OcrError(f"OCR failed: {exc}")
 
@@ -168,9 +166,7 @@ def extract_image_text(data: bytes, *, language: str = DEFAULT_LANGUAGE) -> OcrE
             timeout=OCR_TIMEOUT_SECONDS,
         )
     except TesseractNotFoundError as exc:
-        raise OcrEngineUnavailable(
-            "the tesseract binary is not installed on this host"
-        ) from exc
+        raise OcrEngineUnavailable("the tesseract binary is not installed on this host") from exc
     except RuntimeError as exc:
         # Both failures arrive as RuntimeError — pytesseract raises a bare
         # one on timeout, and TesseractError (also a RuntimeError) for
@@ -182,13 +178,13 @@ def extract_image_text(data: bytes, *, language: str = DEFAULT_LANGUAGE) -> OcrE
 
     words: list[OcrWord] = []
     for text, conf, left, top, width, height in zip(
-            data_dict["text"],
-            data_dict["conf"],
-            data_dict["left"],
-            data_dict["top"],
-            data_dict["width"],
-            data_dict["height"],
-            strict=False,
+        data_dict["text"],
+        data_dict["conf"],
+        data_dict["left"],
+        data_dict["top"],
+        data_dict["width"],
+        data_dict["height"],
+        strict=False,
     ):
         stripped = text.strip()
         confidence = float(conf)
@@ -209,9 +205,7 @@ def extract_image_text(data: bytes, *, language: str = DEFAULT_LANGUAGE) -> OcrE
         )
 
     try:
-        text = pytesseract.image_to_string(
-            image, lang=language, timeout=OCR_TIMEOUT_SECONDS
-        )
+        text = pytesseract.image_to_string(image, lang=language, timeout=OCR_TIMEOUT_SECONDS)
     except RuntimeError as exc:
         raise _engine_failure(exc, language) from exc
 
@@ -222,12 +216,10 @@ def extract_image_text(data: bytes, *, language: str = DEFAULT_LANGUAGE) -> OcrE
 
 
 async def extract_image_text_async(
-        data: bytes, *, language: str = DEFAULT_LANGUAGE
+    data: bytes, *, language: str = DEFAULT_LANGUAGE
 ) -> OcrExtraction:
     """
     Called from the API and the pipeline.
     tesseract is a subprocess doing CPU-bound work awaiting on the event loop
     """
-    return await anyio.to_thread.run_sync(
-        lambda: extract_image_text(data, language=language)
-    )
+    return await anyio.to_thread.run_sync(lambda: extract_image_text(data, language=language))

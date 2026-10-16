@@ -97,6 +97,7 @@ def _image_format(data: bytes) -> tuple[str, str] | None:
         return _WEBP
     return None
 
+
 async def _read_capped(upload: UploadFile, limit: int) -> bytes:
     """
     Read the upload, refusing anything over the limit mid-stream.
