@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
@@ -16,3 +18,12 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> str:
             detail="Invalid or expired token",
         ) from exc
     return username
+
+async def get_current_user_id(subject: str = Depends(get_current_user)) -> uuid.UUID:
+    try:
+        return uuid.UUID(subject)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token subject",
+        ) from exc
