@@ -26,3 +26,17 @@ class FileLinkResponse(BaseModel):
 
     url: str
     expires_in: int
+
+
+class ImageIngestResponse(BaseModel):
+    """
+    The OCR counterpart to FileIngestResponse.
+    """
+
+    document_id: uuid.UUID
+    status: IngestionStatus
+    char_count: int
+    word_count: int
+    mean_confidence: float | None
+    low_confidence: bool
+    language: str
