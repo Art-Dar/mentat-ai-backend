@@ -37,6 +37,20 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+
+def _caller_id(subject: str) -> uuid.UUID:
+    """
+    The authenticated caller's user_id
+    """
+    try:
+        return uuid.UUID(subject)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token subject",
+        ) from exc
+
+
 # Read in pieces so a hostile Content-Length cannot be trusted and a large
 # body is refused before it is all in memory.
 _CHUNK = 1024 * 1024
@@ -81,13 +95,13 @@ async def ingest_file(
     file: UploadFile = File(...),
     title: str | None = Form(default=None),
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user),
+        current_user=Depends(get_current_user),
     store: FileStore = Depends(get_file_store),
 ) -> FileIngestResponse:
     """
     Accept a PDF, extract its text, keep the original, queue the pipeline
     """
-    user_id = current_user.id
+    user_id = _caller_id(current_user)
 
     data = await _read_capped(file, MAX_PDF_BYTES)
 
@@ -172,7 +186,7 @@ async def ingest_file(
 async def get_document_file_link(
     document_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user),
+        current_user=Depends(get_current_user),
     store: FileStore = Depends(get_file_store),
 ) -> FileLinkResponse:
     """
@@ -197,7 +211,7 @@ async def get_document_file_link(
     # The same 404 as "it does not exist", deliberately: a 403 would
     # confirm the id is real, handing out an enumeration oracle over other
     # people's receipts.
-    if document.user_id != current_user.id:
+    if document.user_id != _caller_id(current_user):
         raise missing
 
     try:
