@@ -120,13 +120,13 @@ async def _read_capped(upload: UploadFile, limit: int) -> bytes:
     status_code=status.HTTP_201_CREATED,
 )
 async def ingest_file(
-        background_tasks: BackgroundTasks,
-        file: UploadFile = File(...),
-        title: str | None = Form(default=None),
-        language: str = Form(default=DEFAULT_LANGUAGE),
-        db: AsyncSession = Depends(get_db),
-        user_id: uuid.UUID = Depends(get_current_user_id),
-        store: FileStore = Depends(get_file_store),
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    title: str | None = Form(default=None),
+    language: str = Form(default=DEFAULT_LANGUAGE),
+    db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+    store: FileStore = Depends(get_file_store),
 ) -> FileIngestResponse:
     """
     Accept a PDF, extract its text, keep the original, queue the pipeline
@@ -246,13 +246,13 @@ async def ingest_file(
     status_code=status.HTTP_201_CREATED,
 )
 async def ingest_image(
-        background_tasks: BackgroundTasks,
-        file: UploadFile = File(...),
-        title: str | None = Form(default=None),
-        language: str = Form(default=DEFAULT_LANGUAGE),
-        db: AsyncSession = Depends(get_db),
-        user_id: uuid.UUID = Depends(get_current_user_id),
-        store: FileStore = Depends(get_file_store),
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    title: str | None = Form(default=None),
+    language: str = Form(default=DEFAULT_LANGUAGE),
+    db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+    store: FileStore = Depends(get_file_store),
 ) -> ImageIngestResponse:
     """
     Accept a scan or photo, OCR it, keep the original, queue the pipeline.
@@ -374,10 +374,10 @@ async def ingest_image(
 
 @router.get("/documents/{document_id}/file", response_model=FileLinkResponse)
 async def get_document_file_link(
-        document_id: uuid.UUID,
-        db: AsyncSession = Depends(get_db),
-        user_id: uuid.UUID = Depends(get_current_user_id),
-        store: FileStore = Depends(get_file_store),
+    document_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+    store: FileStore = Depends(get_file_store),
 ) -> FileLinkResponse:
     """
     A short-lived link to the original file, for a citation to point at.

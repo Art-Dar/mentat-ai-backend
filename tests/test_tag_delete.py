@@ -95,9 +95,7 @@ def test_the_deleted_tag_leaves_the_list(client, auth_headers, make_tag):
     assert str(tag_id) not in after
 
 
-def test_a_tag_in_use_is_refused_with_409_and_a_count(
-    client, auth_headers, make_tag, db_session
-):
+def test_a_tag_in_use_is_refused_with_409_and_a_count(client, auth_headers, make_tag, db_session):
     """
     Not a 422: the request is well formed, it conflicts with the state.
     The count is in the message because the user is being asked to decide,
@@ -129,18 +127,16 @@ def test_force_deletes_the_tag_and_its_links(client, auth_headers, make_tag, db_
     assert links_for(db_session, tag_id) == 0, "the link rows must cascade away"
 
 
-def test_force_does_not_delete_the_documents_themselves(
-    client, auth_headers, make_tag, db_session
-):
+def test_force_does_not_delete_the_documents_themselves(client, auth_headers, make_tag, db_session):
     """
     The cascade runs from tag to link, never from tag to document. If this
     ever fails, deleting a tag is destroying a user's saved pages.
     """
     tag_id = make_tag("work", documents_using=2).id
     document_ids = list(
-        db_session.execute(
-            select(DocumentTag.document_id).where(DocumentTag.tag_id == tag_id)
-        ).scalars().all()
+        db_session.execute(select(DocumentTag.document_id).where(DocumentTag.tag_id == tag_id))
+        .scalars()
+        .all()
     )
     assert len(document_ids) == 2
 
@@ -153,14 +149,14 @@ def test_force_does_not_delete_the_documents_themselves(
         )
 
 
-def test_other_tags_on_the_same_document_survive(
-    client, auth_headers, make_tag, db_session
-):
+def test_other_tags_on_the_same_document_survive(client, auth_headers, make_tag, db_session):
     doomed_id = make_tag("doomed", documents_using=1).id
     keeper_id = make_tag("keeper").id
-    document_id = db_session.execute(
-        select(DocumentTag.document_id).where(DocumentTag.tag_id == doomed_id)
-    ).scalars().one()
+    document_id = (
+        db_session.execute(select(DocumentTag.document_id).where(DocumentTag.tag_id == doomed_id))
+        .scalars()
+        .one()
+    )
     db_session.add(DocumentTag(document_id=document_id, tag_id=keeper_id))
     db_session.commit()
 

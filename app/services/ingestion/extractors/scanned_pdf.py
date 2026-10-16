@@ -85,26 +85,21 @@ def _rebuild(pages: list[str]) -> PdfExtraction:
     return PdfExtraction(text="".join(parts), pages=tuple(rebuilt))
 
 
-def extract_pdf_text_with_ocr(
-        data: bytes, *, language: str = DEFAULT_LANGUAGE
-) -> PdfOcrResult:
+def extract_pdf_text_with_ocr(data: bytes, *, language: str = DEFAULT_LANGUAGE) -> PdfOcrResult:
     """
     Pull the text layer out of a PDF, then OCR whatever pages lack one.
     """
     base = extract_pdf_text(data)
 
     if not base.needs_ocr:
-        return PdfOcrResult(
-            extraction=base, ocr_pages=(), skipped_pages=(), mean_confidence=None
-        )
+        return PdfOcrResult(extraction=base, ocr_pages=(), skipped_pages=(), mean_confidence=None)
 
     wanted = base.pages_needing_ocr
     targets = wanted[:MAX_OCR_PAGES]
     skipped = wanted[MAX_OCR_PAGES:]
     if skipped:
         logger.warning(
-            "PDF has %d pages needing OCR, over the %d page budget — "
-            "pages %s left unread",
+            "PDF has %d pages needing OCR, over the %d page budget — pages %s left unread",
             len(wanted),
             MAX_OCR_PAGES,
             list(skipped),
@@ -153,7 +148,7 @@ def extract_pdf_text_with_ocr(
 
 
 async def extract_pdf_text_with_ocr_async(
-        data: bytes, *, language: str = DEFAULT_LANGUAGE
+    data: bytes, *, language: str = DEFAULT_LANGUAGE
 ) -> PdfOcrResult:
     """
     Called from the API.

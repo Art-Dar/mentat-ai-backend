@@ -36,8 +36,8 @@ TYPED = [
 
 def _font(size: int = 30):
     for path in (
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-            "/usr/share/fonts/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/dejavu/DejaVuSans.ttf",
     ):
         try:
             return ImageFont.truetype(path, size)
@@ -85,7 +85,7 @@ def assert_offsets_hold(extraction):
     Every page must still index its own slice of the combined text
     """
     for page in extraction.pages:
-        assert extraction.text[page.start_char: page.end_char] == page.text, (
+        assert extraction.text[page.start_char : page.end_char] == page.text, (
             f"page {page.index} offsets do not match its text"
         )
 
@@ -99,9 +99,7 @@ def test_a_text_pdf_is_returned_unchanged_without_starting_the_engine(monkeypatc
     def explode(*args, **kwargs):
         raise AssertionError("OCR was started for a PDF that has a text layer")
 
-    monkeypatch.setattr(
-        "app.services.ingestion.extractors.scanned_pdf.extract_image_text", explode
-    )
+    monkeypatch.setattr("app.services.ingestion.extractors.scanned_pdf.extract_image_text", explode)
 
     result = extract_pdf_text_with_ocr(build_pdf(("text", TYPED)))
 
@@ -161,7 +159,7 @@ def test_offsets_are_rebuilt_not_patched():
 
     page_one = result.extraction.pages[1]
     assert page_one.start_char > 0, "page 1 must have moved along after page 0 grew"
-    assert "480.00" in result.extraction.text[page_one.start_char: page_one.end_char]
+    assert "480.00" in result.extraction.text[page_one.start_char : page_one.end_char]
 
 
 @needs_tesseract
@@ -171,9 +169,7 @@ def test_pages_over_the_budget_are_reported_not_dropped(monkeypatch):
     The pages past the budget stay visible in skipped_pages, so the API
     can say so and a later ticket can queue them.
     """
-    monkeypatch.setattr(
-        "app.services.ingestion.extractors.scanned_pdf.MAX_OCR_PAGES", 1
-    )
+    monkeypatch.setattr("app.services.ingestion.extractors.scanned_pdf.MAX_OCR_PAGES", 1)
 
     data = build_pdf(("scan", RECEIPT), ("scan", ["DRUHA STORINKA", "Suma 120.00"]))
     result = extract_pdf_text_with_ocr(data)
@@ -196,9 +192,7 @@ def test_one_unreadable_page_does_not_lose_the_others(monkeypatch):
             raise RuntimeError("pretend this page is corrupt")
         return real(data, language=language)
 
-    monkeypatch.setattr(
-        "app.services.ingestion.extractors.scanned_pdf.extract_image_text", flaky
-    )
+    monkeypatch.setattr("app.services.ingestion.extractors.scanned_pdf.extract_image_text", flaky)
 
     data = build_pdf(("scan", RECEIPT), ("scan", ["DRUHA STORINKA", "Suma 120.00 UAH"]))
     result = extract_pdf_text_with_ocr(data)
@@ -213,8 +207,8 @@ def test_one_unreadable_page_does_not_lose_the_others(monkeypatch):
 async def test_the_async_wrapper_agrees_with_the_sync_one(anyio_backend):
     data = build_pdf(("scan", RECEIPT))
     assert (
-               await extract_pdf_text_with_ocr_async(data)
-           ).extraction.text == extract_pdf_text_with_ocr(data).extraction.text
+        await extract_pdf_text_with_ocr_async(data)
+    ).extraction.text == extract_pdf_text_with_ocr(data).extraction.text
 
 
 def test_the_page_budget_is_a_real_limit():

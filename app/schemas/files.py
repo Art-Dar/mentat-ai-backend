@@ -3,7 +3,7 @@ import uuid
 
 from pydantic import BaseModel
 
-from app.models import IngestionStatus, DocumentSource
+from app.models import DocumentSource, IngestionStatus
 
 
 class FileIngestResponse(BaseModel):

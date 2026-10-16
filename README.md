@@ -94,6 +94,7 @@ Docker container up required:
 * Testing tag rename: ``poetry run pytest tests/integration/test_tag_rename.py -v``
 * Testing image ingestion (tesseract engine needed): `` poetry run pytest tests/test_ingest_image.py -v ``
 * Testing document status: ``poetry run pytest tests/test_document_status.py -v``
+* Testing tagging delete form vocabulary: `` poetry run pytest tests/test_tag_delete.py -v``
 
 Manual run of the pdf processing and storing: ``poetry run python -m scripts.check_pdf_storage ingest docs\sample-invoice.pdf``
 Manual run of the image processing and storing: ``poetry run python -m scripts.check_image_ocr ingest docs/receipt.jpg``

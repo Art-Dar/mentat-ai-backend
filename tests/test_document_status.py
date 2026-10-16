@@ -86,7 +86,7 @@ def test_a_failed_document_reports_why(client, auth_headers, make_document):
 
 
 def test_chunk_count_is_what_actually_answers_searchable(
-        client, auth_headers, make_document, db_session
+    client, auth_headers, make_document, db_session
 ):
     """
     Status and chunk_count can disagree, and chunk_count is the
@@ -141,9 +141,7 @@ def test_a_missing_document_is_404(client, auth_headers):
     assert response.status_code == 404
 
 
-def test_another_users_document_is_404_not_403(
-        client, auth_headers, db_session, make_document
-):
+def test_another_users_document_is_404_not_403(client, auth_headers, db_session, make_document):
     """
     Same code as "does not exist", deliberately. A 403 would confirm the
     id is real, which is an enumeration oracle over other people's

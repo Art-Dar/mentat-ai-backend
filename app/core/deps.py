@@ -19,6 +19,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> str:
         ) from exc
     return username
 
+
 async def get_current_user_id(subject: str = Depends(get_current_user)) -> uuid.UUID:
     try:
         return uuid.UUID(subject)

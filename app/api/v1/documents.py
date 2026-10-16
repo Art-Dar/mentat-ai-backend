@@ -14,9 +14,9 @@ router = APIRouter()
 
 @router.get("/documents/{document_id}", response_model=DocumentStatusResponse)
 async def get_document_status(
-        document_id: uuid.UUID,
-        db: AsyncSession = Depends(get_db),
-        user_id: uuid.UUID = Depends(get_current_user_id),
+    document_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user_id),
 ) -> DocumentStatusResponse:
     """
     Where a document got to, so a client that uploaded one can stop guessing.

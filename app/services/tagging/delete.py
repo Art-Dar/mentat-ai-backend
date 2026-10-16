@@ -31,9 +31,7 @@ class TagDeletion:
     documents_affected: int
 
 
-async def delete_tag(
-    db: AsyncSession, tag_id: uuid.UUID, *, force: bool = False
-) -> TagDeletion:
+async def delete_tag(db: AsyncSession, tag_id: uuid.UUID, *, force: bool = False) -> TagDeletion:
     """
     Remove a tag from the vocabulary.
     """
@@ -45,9 +43,7 @@ async def delete_tag(
     # every link row to measure them, and a popular tag has thousands.
     document_count = (
         await db.execute(
-            select(func.count())
-            .select_from(DocumentTag)
-            .where(DocumentTag.tag_id == tag_id)
+            select(func.count()).select_from(DocumentTag).where(DocumentTag.tag_id == tag_id)
         )
     ).scalar_one()
 
