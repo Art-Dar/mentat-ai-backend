@@ -106,14 +106,34 @@ def _load(path: Path) -> tuple[bytes, str, str]:
     return data, extension, media_type
 
 
+def _install_hint() -> str:
+    """
+    The right command for whoever is reading this.
+
+    pytesseract is a wrapper; the engine is a binary pip cannot install, so
+    the first thing anyone hits on a fresh machine is this message. Telling
+    a Windows user to run apt-get wastes their next ten minutes.
+    """
+    if sys.platform == "win32":
+        return (
+            "This is the host's fault, not the photo's. Install it with:\n"
+            "       winget install UB-Mannheim.TesseractOCR\n"
+            "       then reopen the terminal so PATH picks it up, and check "
+            "with: tesseract --version"
+        )
+    if sys.platform == "darwin":
+        return "This is the host's fault, not the photo's. Install it with: brew install tesseract"
+    return (
+        "This is the host's fault, not the photo's. Install it with: "
+        "sudo apt-get install -y tesseract-ocr"
+    )
+
+
 async def _recognise(data: bytes, language: str):
     try:
         return await extract_image_text_async(data, language=language)
     except OcrEngineUnavailable as exc:
-        raise SystemExit(
-            f"{BAD}{exc}\n{INFO}This is the host's fault, not the photo's. "
-            f"Install it with: sudo apt-get install -y tesseract-ocr"
-        ) from exc
+        raise SystemExit(f"{BAD}{exc}\n{INFO}{_install_hint()}") from exc
     except OcrError as exc:
         raise SystemExit(f"{BAD}the image could not be read: {exc}") from exc
 

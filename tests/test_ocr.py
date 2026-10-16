@@ -1,4 +1,5 @@
 import io
+import os
 import random
 import shutil
 
@@ -19,9 +20,19 @@ from app.services.ingestion.extractors.ocr import (
     extract_image_text_async,
 )
 
+_HAVE_TESSERACT = shutil.which("tesseract") is not None
+
+# A host without the binary skips these rather than drowning in failures.
+# CI sets REQUIRE_TESSERACT=1 to turn that skip back into a failure: a
+# runner that forgot `apt-get install tesseract-ocr` would otherwise report
+# a green tick for a run that tested none of the recognition behaviour, and
+# say so to nobody.
 needs_tesseract = pytest.mark.skipif(
-    shutil.which("tesseract") is None,
-    reason="the tesseract binary is not installed on this host",
+    not _HAVE_TESSERACT and os.getenv("REQUIRE_TESSERACT") != "1",
+    reason=(
+        "the tesseract binary is not installed on this host "
+        "(set REQUIRE_TESSERACT=1 to fail instead of skip)"
+    ),
 )
 
 RECEIPT = ["ATB Market", "Chek 10482", "Razom: 349.50 UAH", "Data: 16.10.2026"]
