@@ -88,8 +88,13 @@ def upload(client, auth_headers, db_session, store):
         response = client.post(
             "/api/v1/ingest/file",
             headers=auth_headers,
-            files={"file": (filename, data if data is not None else text_pdf(INVOICE),
-                            "application/pdf")},
+            files={
+                "file": (
+                    filename,
+                    data if data is not None else text_pdf(INVOICE),
+                    "application/pdf",
+                )
+            },
             **extra,
         )
         if response.status_code == 201:

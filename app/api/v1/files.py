@@ -95,7 +95,7 @@ async def ingest_file(
     file: UploadFile = File(...),
     title: str | None = Form(default=None),
     db: AsyncSession = Depends(get_db),
-        current_user=Depends(get_current_user),
+    current_user=Depends(get_current_user),
     store: FileStore = Depends(get_file_store),
 ) -> FileIngestResponse:
     """
@@ -186,7 +186,7 @@ async def ingest_file(
 async def get_document_file_link(
     document_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-        current_user=Depends(get_current_user),
+    current_user=Depends(get_current_user),
     store: FileStore = Depends(get_file_store),
 ) -> FileLinkResponse:
     """
