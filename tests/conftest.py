@@ -123,5 +123,10 @@ def pipeline_isolation(request, monkeypatch):
         # the endpoint handed off instead of awaiting the pipeline inline.
         scheduled.append((document_id, background_tasks))
 
-    monkeypatch.setattr("app.api.v1.ingest.schedule_processing", record)
+    # every module that imported the name needs patching
+    for target in (
+        "app.api.v1.ingest.schedule_processing",
+        "app.api.v1.files.schedule_processing",
+    ):
+        monkeypatch.setattr(target, record)
     yield scheduled
