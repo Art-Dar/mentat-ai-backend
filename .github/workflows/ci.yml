@@ -67,5 +67,10 @@ jobs:
       - name: Run migrations
         run: poetry run alembic upgrade head
 
+      - name: Install tesseract
+        run: sudo apt-get update && sudo apt-get install -y tesseract-ocr tesseract-ocr-ukr
+
       - name: Run tests
-        run: poetry run pytest -v
+        env:
+          REQUIRE_TESSERACT: "1"
+        run: poetry run pytest tests --ignore=tests/integration
