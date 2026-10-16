@@ -56,6 +56,8 @@ for relative, marker, why in stale_files:
     print(f"STALE    {relative}")
     print(f"         has no {marker!r}{' — ' + why if why else ''}")
 
-print(f"\n{len(missing_files)} missing, {len(stale_files)} stale marker(s). "
-      "Copy those files in and re-run.")
+print(
+    f"\n{len(missing_files)} missing, {len(stale_files)} stale marker(s). "
+    "Copy those files in and re-run."
+)
 sys.exit(1)

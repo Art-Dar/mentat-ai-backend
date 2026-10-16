@@ -13,6 +13,7 @@ class FileIngestResponse(BaseModel):
     status is PENDING because the response is built before the background
     task runs — the same contract /ingest already has.
     """
+
     model_config = STRICT
 
     document_id: uuid.UUID
@@ -70,6 +71,7 @@ class FileLinkResponse(BaseModel):
     A short-lived download URL for the stored original
     `expires_in` is returned so the client can cache the URL
     """
+
     model_config = STRICT
 
     url: str
