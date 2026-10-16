@@ -148,12 +148,6 @@ async def ingest_file(
         # engine, so this costs nothing for the common case and is the
         # difference between working and silently failing for a scan.
         ocr_result = await extract_pdf_text_with_ocr_async(data, language=language)
-    except OcrEngineUnavailable as exc:
-        logger.exception("OCR engine unavailable while reading a scanned PDF")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Text recognition is unavailable, please retry",
-        ) from exc
     except EncryptedPdfError as exc:
         raise HTTPException(status_code=_UNPROCESSABLE, detail=str(exc)) from exc
     except PdfExtractionError as exc:
@@ -162,6 +156,19 @@ async def ingest_file(
     extraction = ocr_result.extraction
 
     if len(extraction.text.strip()) < MIN_VALID_LENGTH:
+        if not ocr_result.ocr_available:
+            # We never got to look. Saying "this PDF has no readable text"
+            # would be a claim the server cannot support, and it would send
+            # the user off to re-scan a document that is probably fine.
+            logger.error("OCR unavailable and the text layer was empty")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=(
+                    "This PDF has no text layer and text recognition is "
+                    "unavailable on the server, so it could not be read. "
+                    "Please retry later."
+                ),
+            )
         raise HTTPException(
             status_code=_UNPROCESSABLE,
             detail=(

@@ -1,9 +1,11 @@
 import datetime
 import uuid
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.models import DocumentSource, IngestionStatus
+
+STRICT = ConfigDict(extra="forbid")
 
 
 class FileIngestResponse(BaseModel):
@@ -11,42 +13,23 @@ class FileIngestResponse(BaseModel):
     status is PENDING because the response is built before the background
     task runs — the same contract /ingest already has.
     """
+    model_config = STRICT
 
     document_id: uuid.UUID
     status: IngestionStatus
     page_count: int
     pages_needing_ocr: list[int]
     needs_ocr: bool
-
-
-class FileLinkResponse(BaseModel):
-    """
-    A short-lived download URL for the stored original
-    `expires_in` is returned so the client can cache the URL
-    """
-
-    url: str
-    expires_in: int
-
-
-class ImageIngestResponse(BaseModel):
-    """
-    The OCR counterpart to FileIngestResponse.
-    """
-
-    document_id: uuid.UUID
-    status: IngestionStatus
-    char_count: int
-    word_count: int
-    mean_confidence: float | None
-    low_confidence: bool
-    language: str
+    ocr_pages: list[int] = []
+    ocr_confidence: float | None = None
 
 
 class DocumentStatusResponse(BaseModel):
     """
     Where a document got to, for a client that uploaded one and is waiting.
     """
+
+    model_config = STRICT
 
     document_id: uuid.UUID
     source: DocumentSource
@@ -64,3 +47,30 @@ class DocumentStatusResponse(BaseModel):
     @property
     def is_searchable(self) -> bool:  # pragma: no cover - convenience only
         return self.chunk_count > 0
+
+
+class ImageIngestResponse(BaseModel):
+    """
+    The OCR counterpart to FileIngestResponse.
+    """
+
+    model_config = STRICT
+
+    document_id: uuid.UUID
+    status: IngestionStatus
+    char_count: int
+    word_count: int
+    mean_confidence: float | None
+    low_confidence: bool
+    language: str
+
+
+class FileLinkResponse(BaseModel):
+    """
+    A short-lived download URL for the stored original
+    `expires_in` is returned so the client can cache the URL
+    """
+    model_config = STRICT
+
+    url: str
+    expires_in: int

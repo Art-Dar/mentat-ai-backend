@@ -37,6 +37,7 @@ class PdfOcrResult:
     ocr_pages: tuple[int, ...]
     skipped_pages: tuple[int, ...]
     mean_confidence: float | None
+    ocr_available: bool = True
 
     @property
     def used_ocr(self) -> bool:
@@ -85,21 +86,28 @@ def _rebuild(pages: list[str]) -> PdfExtraction:
     return PdfExtraction(text="".join(parts), pages=tuple(rebuilt))
 
 
-def extract_pdf_text_with_ocr(data: bytes, *, language: str = DEFAULT_LANGUAGE) -> PdfOcrResult:
+def extract_pdf_text_with_ocr(
+    data: bytes, *, language: str = DEFAULT_LANGUAGE
+) -> PdfOcrResult:
     """
     Pull the text layer out of a PDF, then OCR whatever pages lack one.
     """
     base = extract_pdf_text(data)
 
     if not base.needs_ocr:
-        return PdfOcrResult(extraction=base, ocr_pages=(), skipped_pages=(), mean_confidence=None)
+        return PdfOcrResult(
+            extraction=base, ocr_pages=(), skipped_pages=(), mean_confidence=None
+        )
+
+    ocr_available = True
 
     wanted = base.pages_needing_ocr
     targets = wanted[:MAX_OCR_PAGES]
     skipped = wanted[MAX_OCR_PAGES:]
     if skipped:
         logger.warning(
-            "PDF has %d pages needing OCR, over the %d page budget — pages %s left unread",
+            "PDF has %d pages needing OCR, over the %d page budget — "
+            "pages %s left unread",
             len(wanted),
             MAX_OCR_PAGES,
             list(skipped),
@@ -115,11 +123,11 @@ def extract_pdf_text_with_ocr(data: bytes, *, language: str = DEFAULT_LANGUAGE) 
             try:
                 png = _render_page(document, index)
                 result = extract_image_text(png, language=language)
-            except OcrEngineUnavailable:
-                # No engine, or no language pack. Every remaining page
-                # would fail the same way, so stop rather than burn time
-                # rediscovering it, and let the caller answer 503.
-                raise
+            except OcrEngineUnavailable as exc:
+                logger.warning("OCR unavailable, leaving %d page(s) unread: %s",
+                               len(targets), exc)
+                ocr_available = False
+                break
             except (OcrError, Exception) as exc:  # noqa: B014
                 # One unreadable page must not lose the other nineteen.
                 # The page keeps its empty text and stays in
@@ -144,6 +152,7 @@ def extract_pdf_text_with_ocr(data: bytes, *, language: str = DEFAULT_LANGUAGE) 
         ocr_pages=tuple(recovered),
         skipped_pages=tuple(skipped),
         mean_confidence=(sum(confidences) / len(confidences)) if confidences else None,
+        ocr_available=ocr_available,
     )
 
 

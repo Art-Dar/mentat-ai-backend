@@ -100,13 +100,8 @@ def upload(client, auth_headers, db_session, store):
         response = client.post(
             "/api/v1/ingest/file",
             headers=auth_headers,
-            files={
-                "file": (
-                    filename,
-                    data if data is not None else text_pdf(INVOICE),
-                    "application/pdf",
-                )
-            },
+            files={"file": (filename, data if data is not None else text_pdf(INVOICE),
+                            "application/pdf")},
             **extra,
         )
         if response.status_code == 201:
@@ -386,6 +381,7 @@ def test_a_typed_pdf_is_not_marked_as_ocred(upload, db_session):
     assert all(page["source"] == "pdf" for page in document.page_map)
 
 
+@needs_tesseract
 def test_a_pdf_with_no_recoverable_text_is_refused_up_front(upload, store):
     """
     The image endpoint always refused an unreadable upload; the PDF
@@ -399,6 +395,7 @@ def test_a_pdf_with_no_recoverable_text_is_refused_up_front(upload, store):
     assert store.objects == {}, "nothing may be stored for a rejected PDF"
 
 
+@needs_tesseract
 def test_the_refusal_threshold_is_the_pipelines_own(upload):
     """
     The endpoint must refuse exactly what the pipeline would reject, or
@@ -409,3 +406,41 @@ def test_the_refusal_threshold_is_the_pipelines_own(upload):
     assert MIN_VALID_LENGTH > 0
     response = upload(text_pdf(["x" * (MIN_VALID_LENGTH - 5)]))
     assert response.status_code == 422
+
+
+def test_a_readable_pdf_survives_a_missing_ocr_engine(upload, monkeypatch, db_session):
+    from app.services.ingestion.extractors.ocr import OcrEngineUnavailable
+
+    def no_engine(data, *, language="eng"):
+        raise OcrEngineUnavailable("the tesseract binary is not installed on this host")
+
+    monkeypatch.setattr(
+        "app.services.ingestion.extractors.scanned_pdf.extract_image_text", no_engine
+    )
+
+    response = upload(text_pdf(INVOICE, []))
+
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["ocr_pages"] == [], "nothing could be recognised without an engine"
+    assert 1 in body["pages_needing_ocr"], "the blank page is still outstanding"
+
+    document = db_session.get(Document, uuid.UUID(body["document_id"]))
+    assert "480.00" in document.content, "the text layer must survive intact"
+
+
+def test_an_unreadable_pdf_without_an_engine_is_503_not_422(upload, monkeypatch, store):
+    from app.services.ingestion.extractors.ocr import OcrEngineUnavailable
+
+    def no_engine(data, *, language="eng"):
+        raise OcrEngineUnavailable("the tesseract binary is not installed on this host")
+
+    monkeypatch.setattr(
+        "app.services.ingestion.extractors.scanned_pdf.extract_image_text", no_engine
+    )
+
+    response = upload(_blank_pdf())
+
+    assert response.status_code == 503
+    assert "unavailable" in response.json()["error"]["message"].lower()
+    assert store.objects == {}, "nothing may be stored for a document we could not read"
