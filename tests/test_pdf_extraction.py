@@ -268,18 +268,31 @@ async def test_the_async_wrapper_does_not_block_the_event_loop():
     """
     import anyio
 
-    ticks = 0
-
-    async def tick():
-        nonlocal ticks
-        while True:
-            await anyio.sleep(0)
-            ticks += 1
-
     big = text_pdf(*([INVOICE] * 120))
-    async with anyio.create_task_group() as tg:
-        tg.start_soon(tick)
-        await extract_pdf_text_async(big)
-        tg.cancel_scope.cancel()
 
-    assert ticks > 100
+    async def ticks_during(work) -> int:
+        count = 0
+
+        async def tick():
+            nonlocal count
+            while True:
+                await anyio.sleep(0)
+                count += 1
+
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(tick)
+            await work()
+            tg.cancel_scope.cancel()
+        return count
+
+    async def on_the_loop():
+        extract_pdf_text(big)  # synchronous, blocking this task
+
+    async def in_a_thread():
+        await extract_pdf_text_async(big)
+
+    blocked = await ticks_during(on_the_loop)
+    threaded = await ticks_during(in_a_thread)
+
+    # Blocking starves the ticker almost entirely; the thread lets it run.
+    assert threaded > blocked * 5, f"threaded={threaded} blocked={blocked}"
