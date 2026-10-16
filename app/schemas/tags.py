@@ -51,3 +51,9 @@ class TagRenameResponse(BaseModel):
     tag: TagRead
     merged_into: uuid.UUID | None
     documents_affected: int
+
+
+class TagDeleteResponse(BaseModel):
+    tag_id: uuid.UUID
+    name: str
+    documents_affected: int

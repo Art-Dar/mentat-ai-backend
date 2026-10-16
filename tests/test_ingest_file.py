@@ -1,4 +1,6 @@
 import io
+import os
+import shutil
 import uuid
 
 import pytest
@@ -12,6 +14,16 @@ from app.main import app
 from app.models import Document, DocumentSource, IngestionStatus
 from app.services.storage.fake_store import BrokenFileStore, FakeFileStore
 from app.services.storage.s3_store import get_file_store
+
+_HAVE_TESSERACT = shutil.which("tesseract") is not None
+
+needs_tesseract = pytest.mark.skipif(
+    not _HAVE_TESSERACT and os.getenv("REQUIRE_TESSERACT") != "1",
+    reason=(
+        "the tesseract binary is not installed on this host "
+        "(set REQUIRE_TESSERACT=1 to fail instead of skip)"
+    ),
+)
 
 INVOICE = [
     "INVOICE 2026-0042",
@@ -172,7 +184,12 @@ def test_the_page_map_is_stored_for_citations(upload, db_session):
     assert len(document.page_map) == 2
     for page in document.page_map:
         assert document.content[page["start_char"] : page["end_char"]] is not None
-        assert set(page) == {"index", "start_char", "end_char", "needs_ocr"}
+        # "source" records which half of the pipeline produced this page:
+        # "pdf" for a real text layer, "ocr" for a page that was a picture
+        # and had to be recognised. A citation into an OCRed page is
+        # weaker evidence, and the UI needs to be able to say so.
+        assert set(page) == {"index", "start_char", "end_char", "needs_ocr", "source"}
+        assert page["source"] == "pdf", "a typed PDF must not be marked as OCRed"
 
 
 def test_page_offsets_still_index_the_stored_content(upload, db_session):
@@ -187,13 +204,15 @@ def test_page_offsets_still_index_the_stored_content(upload, db_session):
 # the OCR verdict reaches the client
 
 
-def test_a_scan_is_reported_as_needing_ocr(upload):
+@needs_tesseract
+def test_a_scan_is_now_read_rather_than_flagged(upload):
     response = upload(scan_pdf())
 
     body = response.json()
     assert response.status_code == 201
-    assert body["needs_ocr"] is True
-    assert body["pages_needing_ocr"] == [0]
+    assert body["ocr_pages"] == [0]
+    assert body["pages_needing_ocr"] == []
+    assert body["needs_ocr"] is False
 
 
 def test_a_text_pdf_does_not_need_ocr(upload):
@@ -323,3 +342,110 @@ def test_a_link_for_an_unknown_document_is_404(client, auth_headers, store):
     response = client.get(f"/api/v1/documents/{uuid.uuid4()}/file", headers=auth_headers)
 
     assert response.status_code == 404
+
+
+def _blank_pdf() -> bytes:
+    """A PDF with pages but no content anywhere — not even a scan to read."""
+    buf = io.BytesIO()
+    pdf = canvas.Canvas(buf, pagesize=A4)
+    pdf.showPage()
+    pdf.save()
+    return buf.getvalue()
+
+
+@needs_tesseract
+def test_a_scanned_pdf_is_ocred_and_becomes_searchable(upload, db_session):
+    """
+    The user story's headline case. Before the OCR bridge this returned
+    201 with empty content and then failed in the background pipeline,
+    which nobody saw.
+    """
+    response = upload(scan_pdf())
+    assert response.status_code == 201, response.text
+
+    body = response.json()
+    assert body["ocr_pages"] == [0], "the scanned page should have been recognised"
+    assert body["pages_needing_ocr"] == [], "nothing should be left outstanding"
+    assert body["needs_ocr"] is False
+    assert body["ocr_confidence"] is not None
+
+    document = db_session.get(Document, uuid.UUID(body["document_id"]))
+    assert "212.45" in document.content, "the receipt total must be in the stored text"
+    assert document.page_map[0]["source"] == "ocr"
+    assert document.page_map[0]["needs_ocr"] is False
+
+
+@needs_tesseract
+def test_a_typed_pdf_is_not_marked_as_ocred(upload, db_session):
+    body = upload(text_pdf(INVOICE)).json()
+
+    assert body["ocr_pages"] == []
+    assert body["ocr_confidence"] is None
+
+    document = db_session.get(Document, uuid.UUID(body["document_id"]))
+    assert all(page["source"] == "pdf" for page in document.page_map)
+
+
+@needs_tesseract
+def test_a_pdf_with_no_recoverable_text_is_refused_up_front(upload, store):
+    """
+    The image endpoint always refused an unreadable upload; the PDF
+    endpoint accepted it and let the pipeline fail in the background. Now
+    both answer 422 while the user still has the document in hand.
+    """
+    response = upload(_blank_pdf())
+
+    assert response.status_code == 422
+    assert "No readable text" in response.json()["error"]["message"]
+    assert store.objects == {}, "nothing may be stored for a rejected PDF"
+
+
+@needs_tesseract
+def test_the_refusal_threshold_is_the_pipelines_own(upload):
+    """
+    The endpoint must refuse exactly what the pipeline would reject, or
+    the two disagree and documents fail after being accepted.
+    """
+    from app.services.ingestion.normalization import MIN_VALID_LENGTH
+
+    assert MIN_VALID_LENGTH > 0
+    response = upload(text_pdf(["x" * (MIN_VALID_LENGTH - 5)]))
+    assert response.status_code == 422
+
+
+def test_a_readable_pdf_survives_a_missing_ocr_engine(upload, monkeypatch, db_session):
+    from app.services.ingestion.extractors.ocr import OcrEngineUnavailable
+
+    def no_engine(data, *, language="eng"):
+        raise OcrEngineUnavailable("the tesseract binary is not installed on this host")
+
+    monkeypatch.setattr(
+        "app.services.ingestion.extractors.scanned_pdf.extract_image_text", no_engine
+    )
+
+    response = upload(text_pdf(INVOICE, []))
+
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["ocr_pages"] == [], "nothing could be recognised without an engine"
+    assert 1 in body["pages_needing_ocr"], "the blank page is still outstanding"
+
+    document = db_session.get(Document, uuid.UUID(body["document_id"]))
+    assert "480.00" in document.content, "the text layer must survive intact"
+
+
+def test_an_unreadable_pdf_without_an_engine_is_503_not_422(upload, monkeypatch, store):
+    from app.services.ingestion.extractors.ocr import OcrEngineUnavailable
+
+    def no_engine(data, *, language="eng"):
+        raise OcrEngineUnavailable("the tesseract binary is not installed on this host")
+
+    monkeypatch.setattr(
+        "app.services.ingestion.extractors.scanned_pdf.extract_image_text", no_engine
+    )
+
+    response = upload(_blank_pdf())
+
+    assert response.status_code == 503
+    assert "unavailable" in response.json()["error"]["message"].lower()
+    assert store.objects == {}, "nothing may be stored for a document we could not read"

@@ -15,7 +15,7 @@ from fastapi import (
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user_id
 from app.models import Document, DocumentSource, IngestionStatus
 from app.schemas.files import FileIngestResponse, FileLinkResponse, ImageIngestResponse
 from app.services.ingestion.extractors.ocr import (
@@ -30,8 +30,9 @@ from app.services.ingestion.extractors.pdf import (
     MAX_PDF_BYTES,
     EncryptedPdfError,
     PdfExtractionError,
-    extract_pdf_text_async,
 )
+from app.services.ingestion.extractors.scanned_pdf import extract_pdf_text_with_ocr_async
+from app.services.ingestion.normalization import MIN_VALID_LENGTH
 from app.services.ingestion.scheduler import schedule_processing
 from app.services.storage.base import (
     DEFAULT_URL_TTL_SECONDS,
@@ -45,20 +46,6 @@ from app.services.storage.s3_store import get_file_store
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-
-def _caller_id(subject: str) -> uuid.UUID:
-    """
-    The authenticated caller's user_id
-    """
-    try:
-        return uuid.UUID(subject)
-    except (TypeError, ValueError) as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token subject",
-        ) from exc
-
 
 # Read in pieces so a hostile Content-Length cannot be trusted and a large
 # body is refused before it is all in memory.
@@ -84,6 +71,14 @@ _ACCEPTED_IMAGES = "PNG, JPEG, WEBP or TIFF"
 # Tesseract language codes
 # three letters, joined by + for multi-language pages ("eng+ukr")
 _LANGUAGE_RE = re.compile(r"^[a-z]{3}(\+[a-z]{3})*$")
+
+
+def _check_language(language: str) -> None:
+    if not _LANGUAGE_RE.match(language):
+        raise HTTPException(
+            status_code=_UNPROCESSABLE,
+            detail="language must be a tesseract code such as 'eng' or 'eng+ukr'",
+        )
 
 
 def _image_format(data: bytes) -> tuple[str, str] | None:
@@ -128,14 +123,15 @@ async def ingest_file(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     title: str | None = Form(default=None),
+    language: str = Form(default=DEFAULT_LANGUAGE),
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user),
+    user_id: uuid.UUID = Depends(get_current_user_id),
     store: FileStore = Depends(get_file_store),
 ) -> FileIngestResponse:
     """
     Accept a PDF, extract its text, keep the original, queue the pipeline
     """
-    user_id = _caller_id(current_user)
+    _check_language(language)
 
     data = await _read_capped(file, MAX_PDF_BYTES)
 
@@ -148,11 +144,39 @@ async def ingest_file(
         )
 
     try:
-        extraction = await extract_pdf_text_async(data)
+        # OCR-capable: a PDF with a complete text layer never starts the
+        # engine, so this costs nothing for the common case and is the
+        # difference between working and silently failing for a scan.
+        ocr_result = await extract_pdf_text_with_ocr_async(data, language=language)
     except EncryptedPdfError as exc:
         raise HTTPException(status_code=_UNPROCESSABLE, detail=str(exc)) from exc
     except PdfExtractionError as exc:
         raise HTTPException(status_code=_UNPROCESSABLE, detail=str(exc)) from exc
+
+    extraction = ocr_result.extraction
+
+    if len(extraction.text.strip()) < MIN_VALID_LENGTH:
+        if not ocr_result.ocr_available:
+            # We never got to look. Saying "this PDF has no readable text"
+            # would be a claim the server cannot support, and it would send
+            # the user off to re-scan a document that is probably fine.
+            logger.error("OCR unavailable and the text layer was empty")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=(
+                    "This PDF has no text layer and text recognition is "
+                    "unavailable on the server, so it could not be read. "
+                    "Please retry later."
+                ),
+            )
+        raise HTTPException(
+            status_code=_UNPROCESSABLE,
+            detail=(
+                "No readable text could be extracted from this PDF, even "
+                "after scanning it for text in images. If it is a scan, try "
+                "a sharper copy; if it is a form, check it is not empty."
+            ),
+        )
 
     # The id is generated here, not by the database, so the storage key
     # exists before the row does — which is what lets the bytes be written
@@ -185,7 +209,10 @@ async def ingest_file(
                 "index": page.index,
                 "start_char": page.start_char,
                 "end_char": page.end_char,
-                "needs_ocr": page.needs_ocr,
+                # "still has no usable text", matching the response's
+                # pages_needing_ocr. NOT PageText.needs_ocr
+                "needs_ocr": page.index in ocr_result.still_needs_ocr,
+                "source": "ocr" if page.index in ocr_result.ocr_pages else "pdf",
             }
             for page in extraction.pages
         ],
@@ -211,8 +238,12 @@ async def ingest_file(
         document_id=document.id,
         status=document.status,
         page_count=extraction.page_count,
-        pages_needing_ocr=list(extraction.pages_needing_ocr),
-        needs_ocr=extraction.needs_ocr,
+        # After the OCR pass, so these are pages still without text —
+        # over the page budget, or genuinely unreadable.
+        pages_needing_ocr=list(ocr_result.still_needs_ocr),
+        needs_ocr=bool(ocr_result.still_needs_ocr),
+        ocr_pages=list(ocr_result.ocr_pages),
+        ocr_confidence=ocr_result.mean_confidence,
     )
 
 
@@ -227,20 +258,19 @@ async def ingest_image(
     title: str | None = Form(default=None),
     language: str = Form(default=DEFAULT_LANGUAGE),
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user),
+    user_id: uuid.UUID = Depends(get_current_user_id),
     store: FileStore = Depends(get_file_store),
 ) -> ImageIngestResponse:
     """
     Accept a scan or photo, OCR it, keep the original, queue the pipeline.
-    Retrieval is the same GET /documents/{id}/file the PDF path uses
-    """
-    user_id = _caller_id(current_user)
 
-    if not _LANGUAGE_RE.match(language):
-        raise HTTPException(
-            status_code=_UNPROCESSABLE,
-            detail="language must be a tesseract code such as 'eng' or 'eng+ukr'",
-        )
+    The stored original is the point, not a side effect: OCR is lossy and
+    improves between tesseract versions, so the bytes are what a later pass
+    re-reads and what a citation points a user at. Retrieval is the same
+    GET /documents/{id}/file the PDF path uses — the object store does not
+    care what is in the object.
+    """
+    _check_language(language)
 
     data = await _read_capped(file, MAX_IMAGE_BYTES)
 
@@ -256,7 +286,8 @@ async def ingest_image(
         extraction = await extract_image_text_async(data, language=language)
     except OcrEngineUnavailable as exc:
         # The upload was fine; the host is missing its tesseract binary or
-        # the engine hung. 503, not 422 — a retry may well succeed
+        # the engine hung. 503, not 422 — a retry may well succeed, and the
+        # user has nothing to fix.
         logger.exception("OCR engine unavailable")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -301,6 +332,11 @@ async def ingest_image(
         storage_key=key,
         file_size=len(data),
         original_filename=file.filename,
+        # One entry, so the column means the same thing for both sources:
+        # which span of `content` came from where. needs_ocr is False
+        # because this text IS the OCR result — there is no second pass to
+        # queue.
+        #
         # The per-word bounding boxes stay out of the database on purpose:
         # a dense receipt is several hundred words, and nothing reads them
         # yet. When the citation epic needs them they belong in their own
@@ -347,7 +383,7 @@ async def ingest_image(
 async def get_document_file_link(
     document_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user),
+    user_id: uuid.UUID = Depends(get_current_user_id),
     store: FileStore = Depends(get_file_store),
 ) -> FileLinkResponse:
     """
@@ -372,7 +408,7 @@ async def get_document_file_link(
     # The same 404 as "it does not exist", deliberately: a 403 would
     # confirm the id is real, handing out an enumeration oracle over other
     # people's receipts.
-    if document.user_id != _caller_id(current_user):
+    if document.user_id != user_id:
         raise missing
 
     try:

@@ -10,10 +10,12 @@ from app.schemas.tags import (
     AttachTagsRequest,
     DocumentTagRead,
     RenameTagRequest,
+    TagDeleteResponse,
     TagRead,
     TagRenameResponse,
     TagWithCount,
 )
+from app.services.tagging.delete import TagInUse, delete_tag
 from app.services.tagging.rename import TagNotFound, rename_tag
 from app.services.tagging.tags import (
     TagError,
@@ -99,6 +101,45 @@ async def rename_vocabulary_tag(
     return TagRenameResponse(
         tag=TagRead.model_validate(result.tag),
         merged_into=result.merged_into,
+        documents_affected=result.documents_affected,
+    )
+
+
+@router.delete("/tags/{tag_id}", response_model=TagDeleteResponse)
+async def delete_vocabulary_tag(
+    tag_id: uuid.UUID,
+    force: bool = Query(
+        default=False,
+        description=(
+            "Delete even when the tag is still on documents, removing it "
+            "from all of them. Without this a tag in use is refused with 409."
+        ),
+    ),
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(get_current_user),
+) -> TagDeleteResponse:
+    try:
+        result = await delete_tag(db, tag_id, force=force)
+    # TagNotFound and TagInUse are both TagError subclasses, so these
+    # three clauses have to stay in this order: specific before general,
+    # or every failure collapses into one status code.
+    except TagNotFound as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tag not found",
+        ) from exc
+    except TagInUse as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+    except TagError as exc:
+        raise HTTPException(status_code=_UNPROCESSABLE, detail=str(exc)) from exc
+
+    await db.commit()
+    return TagDeleteResponse(
+        tag_id=result.tag_id,
+        name=result.name,
         documents_affected=result.documents_affected,
     )
 

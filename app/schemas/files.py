@@ -1,8 +1,11 @@
+import datetime
 import uuid
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
-from app.models import IngestionStatus
+from app.models import DocumentSource, IngestionStatus
+
+STRICT = ConfigDict(extra="forbid")
 
 
 class FileIngestResponse(BaseModel):
@@ -11,27 +14,48 @@ class FileIngestResponse(BaseModel):
     task runs — the same contract /ingest already has.
     """
 
+    model_config = STRICT
+
     document_id: uuid.UUID
     status: IngestionStatus
     page_count: int
     pages_needing_ocr: list[int]
     needs_ocr: bool
+    ocr_pages: list[int] = []
+    ocr_confidence: float | None = None
 
 
-class FileLinkResponse(BaseModel):
+class DocumentStatusResponse(BaseModel):
     """
-    A short-lived download URL for the stored original
-    `expires_in` is returned so the client can cache the URL
+    Where a document got to, for a client that uploaded one and is waiting.
     """
 
-    url: str
-    expires_in: int
+    model_config = STRICT
+
+    document_id: uuid.UUID
+    source: DocumentSource
+    status: IngestionStatus
+    title: str | None
+    error_message: str | None
+    char_count: int
+    chunk_count: int
+    page_count: int
+    has_file: bool
+    language: str | None
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+    @property
+    def is_searchable(self) -> bool:  # pragma: no cover - convenience only
+        return self.chunk_count > 0
 
 
 class ImageIngestResponse(BaseModel):
     """
     The OCR counterpart to FileIngestResponse.
     """
+
+    model_config = STRICT
 
     document_id: uuid.UUID
     status: IngestionStatus
@@ -40,3 +64,15 @@ class ImageIngestResponse(BaseModel):
     mean_confidence: float | None
     low_confidence: bool
     language: str
+
+
+class FileLinkResponse(BaseModel):
+    """
+    A short-lived download URL for the stored original
+    `expires_in` is returned so the client can cache the URL
+    """
+
+    model_config = STRICT
+
+    url: str
+    expires_in: int
