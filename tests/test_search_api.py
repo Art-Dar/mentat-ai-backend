@@ -46,7 +46,9 @@ def make_chunk(db_session, seeded_user):
 
     def build(content: str = PASSAGE, *, owner: User | None = None) -> Document:
         if owner is None:
-            owner = db_session.execute(select(User).where(User.email == email)).scalars().one()
+            owner = db_session.execute(
+                select(User).where(User.email == email)
+            ).scalars().one()
 
         document = Document(
             id=uuid.uuid4(),
@@ -102,7 +104,9 @@ def search(client, headers, **body):
     return client.post("/api/v1/search", headers=headers, json=body)
 
 
-def test_another_users_chunks_are_never_returned(client, auth_headers, make_chunk, fake_embedder):
+def test_another_users_chunks_are_never_returned(
+    client, auth_headers, make_chunk, fake_embedder
+):
     """
     Chunks carry no owner of their own — the only place ownership can be
     enforced is the join to documents.
@@ -146,7 +150,9 @@ def test_authentication_is_required(client):
     assert response.status_code in (401, 403)
 
 
-def test_a_hit_carries_everything_a_citation_needs(client, auth_headers, make_chunk, fake_embedder):
+def test_a_hit_carries_everything_a_citation_needs(
+    client, auth_headers, make_chunk, fake_embedder
+):
     document = make_chunk()
 
     body = search(client, auth_headers, min_similarity=-1.0).json()
@@ -160,7 +166,7 @@ def test_a_hit_carries_everything_a_citation_needs(client, auth_headers, make_ch
     assert -1.0 <= hit["similarity"] <= 1.0
     # The offsets index the DOCUMENT, which is what lets the citation
     # ticket map them onto a page without changing this response.
-    assert document.content[hit["start_char"] : hit["end_char"]] == hit["content"]
+    assert document.content[hit["start_char"]: hit["end_char"]] == hit["content"]
 
 
 def test_the_response_echoes_the_limit_that_was_applied(
@@ -198,6 +204,13 @@ def test_no_matches_is_an_empty_list_not_an_error(client, auth_headers, fake_emb
         "top_k": 5,
         "count": 0,
         "hits": [],
+        "retrieval": {
+            "citations": [],
+            "documents": [],
+            "tags": [],
+            "document_count": 0,
+            "chunk_count": 0,
+        },
     }
 
 
@@ -237,3 +250,174 @@ def test_top_k_at_the_boundaries_is_accepted(client, auth_headers, make_chunk, f
     make_chunk()
     assert search(client, auth_headers, top_k=1).status_code == 200
     assert search(client, auth_headers, top_k=100).status_code == 200
+
+
+@pytest.fixture
+def make_multi_chunk(db_session, seeded_user):
+    """
+    make_chunk gives one chunk at offset zero, which cannot show whether
+    the grouping works — and grouping is the whole point of the
+    `documents` layer.
+    """
+    created: list[uuid.UUID] = []
+    email, _ = seeded_user
+
+    def build(*, page_map=None, title="Invoice 2026-0042", source=DocumentSource.PDF):
+        user = db_session.execute(select(User).where(User.email == email)).scalars().one()
+        content = ("Espresso grind and dose notes. " * 20)[:600]
+
+        document = Document(
+            id=uuid.uuid4(),
+            user_id=user.id,
+            source=source,
+            status=IngestionStatus.COMPLETED,
+            content=content,
+            title=title,
+            page_map=page_map,
+        )
+        db_session.add(document)
+        db_session.flush()
+        created.append(document.id)
+
+        for index, (start, end) in enumerate([(0, 300), (300, 600)]):
+            db_session.add(
+                Chunk(
+                    document_id=document.id,
+                    chunk_index=index,
+                    content=content[start:end],
+                    start_char=start,
+                    end_char=end,
+                    embedding=[0.01] * EMBEDDING_DIM,
+                    embedding_model="fake",
+                )
+            )
+        db_session.commit()
+        return document
+
+    yield build
+
+    for document_id in created:
+        document = db_session.get(Document, document_id)
+        if document is not None:
+            db_session.delete(document)
+    db_session.commit()
+
+
+def test_search_returns_the_retrieval_object_the_frontend_renders(
+    client, auth_headers, make_chunk, fake_embedder
+):
+    """
+    /search used to return SearchHitRead only — no locator, no pages, no
+    from_ocr, no tags. The frontend contract told the engineer to build
+    the sources panel against this endpoint, so he would have built
+    against one shape and rebuilt for another when /ask landed.
+    """
+    make_chunk()
+    retrieval = search(client, auth_headers, min_similarity=-1.0).json()["retrieval"]
+
+    assert retrieval["chunk_count"] == 1
+    citation = retrieval["citations"][0]
+    # Every field the contract promises, present rather than merely not null.
+    for field in (
+        "marker",
+        "locator",
+        "pages",
+        "page_count",
+        "from_ocr",
+        "ocr_confidence",
+        "start_char",
+        "end_char",
+        "quote",
+        "similarity",
+        "url",
+    ):
+        assert field in citation, f"the frontend contract promises {field}"
+
+
+def test_markers_are_one_to_n_with_no_gaps(
+    client, auth_headers, make_multi_chunk, fake_embedder
+):
+    """A gap would look to a reader like a footnote that went missing."""
+    make_multi_chunk()
+    body = search(client, auth_headers, min_similarity=-1.0).json()
+
+    markers = [c["marker"] for c in body["retrieval"]["citations"]]
+    assert markers == [f"[{i}]" for i in range(1, len(markers) + 1)]
+    assert len(markers) == body["count"]
+
+
+def test_two_chunks_from_one_document_are_one_chip(
+    client, auth_headers, make_multi_chunk, fake_embedder
+):
+    """
+    Rendering one chip per citation would show the same invoice twice.
+    This grouping is what prevents it, and it has to survive the trip
+    through the API, not just the service layer.
+    """
+    make_multi_chunk(
+        page_map=[
+            {"index": 0, "start_char": 0, "end_char": 300, "needs_ocr": False, "source": "pdf"},
+            {
+                "index": 1,
+                "start_char": 300,
+                "end_char": 600,
+                "needs_ocr": False,
+                "source": "ocr",
+                "mean_confidence": 55.0,
+            },
+        ]
+    )
+    retrieval = search(client, auth_headers, min_similarity=-1.0).json()["retrieval"]
+
+    assert retrieval["chunk_count"] == 2
+    assert retrieval["document_count"] == 1
+
+    chip = retrieval["documents"][0]
+    assert chip["markers"] == ["[1]", "[2]"]
+    assert chip["pages"] == [1, 2]
+    assert chip["locator"] == "pages 1-2"
+    # One cited passage was machine-read, so the chip carries the warning.
+    assert chip["from_ocr"] is True
+
+
+def test_hits_and_citations_describe_the_same_chunks(
+    client, auth_headers, make_multi_chunk, fake_embedder
+):
+    """
+    Both are returned, so they must agree. If they ever disagree the
+    frontend has no way to know which one lied.
+    """
+    make_multi_chunk()
+    body = search(client, auth_headers, min_similarity=-1.0).json()
+
+    assert [h["chunk_id"] for h in body["hits"]] == [
+        c["chunk_id"] for c in body["retrieval"]["citations"]
+    ]
+    for hit, citation in zip(body["hits"], body["retrieval"]["citations"], strict=True):
+        assert (hit["start_char"], hit["end_char"]) == (
+            citation["start_char"],
+            citation["end_char"],
+        )
+        assert hit["similarity"] == citation["similarity"]
+
+
+def test_the_retrieval_object_is_scoped_to_the_caller_too(
+    client, auth_headers, make_chunk, fake_embedder
+):
+    """
+    The isolation guarantee has to cover the new block as well. It is
+    built from the hits, so it should — but "should" is how a leak gets
+    shipped, and this block now carries document titles and tag names
+    rather than only chunk text.
+    """
+    make_chunk("my own notes about espresso grind size and dose")
+    make_chunk(
+        "SOMEBODY ELSE'S PRIVATE RECEIPT, total 349.50 UAH",
+        owner=make_chunk.stranger(),
+    )
+
+    retrieval = search(client, auth_headers, top_k=50, min_similarity=-1.0).json()["retrieval"]
+
+    for citation in retrieval["citations"]:
+        assert "PRIVATE RECEIPT" not in citation["quote"]
+    assert retrieval["document_count"] == 1
