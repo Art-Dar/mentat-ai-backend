@@ -237,7 +237,7 @@ async def test_offsets_returned_by_search_still_index_the_document(corpus, searc
         )
         for hit in hits:
             document = await db.get(Document, hit.document_id)
-            assert document.content[hit.start_char: hit.end_char] == hit.content
+            assert document.content[hit.start_char : hit.end_char] == hit.content
 
 
 # filters

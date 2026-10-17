@@ -46,9 +46,7 @@ def make_chunk(db_session, seeded_user):
 
     def build(content: str = PASSAGE, *, owner: User | None = None) -> Document:
         if owner is None:
-            owner = db_session.execute(
-                select(User).where(User.email == email)
-            ).scalars().one()
+            owner = db_session.execute(select(User).where(User.email == email)).scalars().one()
 
         document = Document(
             id=uuid.uuid4(),
@@ -104,9 +102,7 @@ def search(client, headers, **body):
     return client.post("/api/v1/search", headers=headers, json=body)
 
 
-def test_another_users_chunks_are_never_returned(
-    client, auth_headers, make_chunk, fake_embedder
-):
+def test_another_users_chunks_are_never_returned(client, auth_headers, make_chunk, fake_embedder):
     """
     Chunks carry no owner of their own — the only place ownership can be
     enforced is the join to documents.
@@ -150,9 +146,7 @@ def test_authentication_is_required(client):
     assert response.status_code in (401, 403)
 
 
-def test_a_hit_carries_everything_a_citation_needs(
-    client, auth_headers, make_chunk, fake_embedder
-):
+def test_a_hit_carries_everything_a_citation_needs(client, auth_headers, make_chunk, fake_embedder):
     document = make_chunk()
 
     body = search(client, auth_headers, min_similarity=-1.0).json()
@@ -166,7 +160,7 @@ def test_a_hit_carries_everything_a_citation_needs(
     assert -1.0 <= hit["similarity"] <= 1.0
     # The offsets index the DOCUMENT, which is what lets the citation
     # ticket map them onto a page without changing this response.
-    assert document.content[hit["start_char"]: hit["end_char"]] == hit["content"]
+    assert document.content[hit["start_char"] : hit["end_char"]] == hit["content"]
 
 
 def test_the_response_echoes_the_limit_that_was_applied(
