@@ -12,8 +12,14 @@ from app.services.retrieval.search import SearchHit
 
 PAGE_MAP = [
     {"index": 0, "start_char": 0, "end_char": 770, "needs_ocr": False, "source": "pdf"},
-    {"index": 1, "start_char": 772, "end_char": 1542, "needs_ocr": False, "source": "ocr",
-     "mean_confidence": 61.0},
+    {
+        "index": 1,
+        "start_char": 772,
+        "end_char": 1542,
+        "needs_ocr": False,
+        "source": "ocr",
+        "mean_confidence": 61.0,
+    },
 ]
 CONTENT = "x" * 1542
 
@@ -133,9 +139,7 @@ async def test_a_hit_whose_document_vanished_is_dropped_not_fatal(invoice):
     one reference beats failing an answer that is otherwise correct.
     """
     async with AsyncSessionLocal() as db:
-        citations = await build_citations(
-            db, [hit(invoice, 100, 400), hit(uuid.uuid4(), 0, 100)]
-        )
+        citations = await build_citations(db, [hit(invoice, 100, 400), hit(uuid.uuid4(), 0, 100)])
 
     assert len(citations) == 1
     assert citations[0].marker == "[1]", "markers must stay gapless after a drop"
@@ -157,7 +161,7 @@ async def test_offsets_in_a_citation_still_index_the_document(invoice):
         citation = (await build_citations(db, [hit(invoice, 100, 400)]))[0]
         document = await db.get(Document, invoice)
 
-    assert len(document.content[citation.start_char: citation.end_char]) == 300
+    assert len(document.content[citation.start_char : citation.end_char]) == 300
 
 
 @pytest.mark.anyio
@@ -180,8 +184,8 @@ async def test_a_real_chunk_row_maps_onto_a_page(invoice, owner):
         db.add(chunk)
         await db.commit()
         stored = (
-            await db.execute(select(Chunk).where(Chunk.document_id == invoice))
-        ).scalars().one()
+            (await db.execute(select(Chunk).where(Chunk.document_id == invoice))).scalars().one()
+        )
 
         citations = await build_citations(
             db,

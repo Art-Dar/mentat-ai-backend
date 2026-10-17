@@ -83,9 +83,7 @@ def _ocr_provenance(
     cited = [page for page in page_map if int(page["index"]) + 1 in pages]
     from_ocr = any(page.get("source") == "ocr" for page in cited)
     scores = [
-        float(page["mean_confidence"])
-        for page in cited
-        if page.get("mean_confidence") is not None
+        float(page["mean_confidence"]) for page in cited if page.get("mean_confidence") is not None
     ]
     return from_ocr, (min(scores) if scores else None)
 
@@ -159,9 +157,7 @@ async def build_citations(db: AsyncSession, hits: list[SearchHit]) -> list[Citat
         return []
 
     document_ids = {hit.document_id for hit in hits}
-    rows = (
-        await db.execute(select(Document).where(Document.id.in_(document_ids)))
-    ).scalars().all()
+    rows = (await db.execute(select(Document).where(Document.id.in_(document_ids)))).scalars().all()
     documents = {document.id: document for document in rows}
 
     citations: list[Citation] = []
