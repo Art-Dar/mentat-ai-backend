@@ -1,18 +1,12 @@
-import asyncio
 import json
 import logging
 from dataclasses import dataclass
 from typing import Protocol
 
 import groq
-from groq import (
-    APIConnectionError,
-    APITimeoutError,
-    InternalServerError,
-    RateLimitError,
-)
 
-from app.core.config import settings
+from app.services.llm.base import ChatClient, Completion, LlmError
+from app.services.llm.groq_client import GroqChatClient
 
 logger = logging.getLogger(__name__)
 
@@ -20,18 +14,7 @@ MAX_TAGS = 5
 MAX_CHARS_FOR_TAGGING = 4000
 # How many existing tags to offer as reuse candidates
 VOCABULARY_LIMIT = 60
-MAX_ATTEMPTS = 3
-_BACKOFF_BASE_SECONDS = 3.0
-
-# Transient. AuthenticationError and BadRequestError are absent on purpose:
-# a wrong API key or a malformed schema will not fix itself, and retrying
-# only delays an identical failure.
-_RETRYABLE = (
-    RateLimitError,
-    InternalServerError,
-    APITimeoutError,
-    APIConnectionError,
-)
+MAX_COMPLETION_TOKENS = 512
 
 _RESPONSE_SCHEMA = {
     "type": "object",
@@ -96,16 +79,26 @@ class GroqTagger:
 
     def __init__(
         self,
-        client: groq.AsyncGroq | None = None,
+        client: groq.AsyncGroq | ChatClient | None = None,
         model: str | None = None,
         max_tags: int = MAX_TAGS,
     ) -> None:
-        if client is None:
-            if not settings.groq_api_key.get_secret_value():
-                raise TaggingError("GROQ_API_KEY is not set")
-            client = groq.AsyncGroq(api_key=settings.groq_api_key.get_secret_value())
-        self._client = client
-        self._model = model or settings.tagging_model
+        """
+        `client` still accepts a raw groq.AsyncGroq, which is what the
+        existing tests inject, so the stubs that record a request keep
+        working unchanged
+        """
+        try:
+            self._chat: ChatClient = (
+                client
+                if hasattr(client, "complete")
+                else GroqChatClient(client, model)  # type: ignore[arg-type]
+            )
+        except LlmError as exc:
+            # A missing API key surfaces as the tagging layer's own error,
+            # because the pipeline catches TaggingError and lets the
+            # document through untagged
+            raise TaggingError(str(exc)) from exc
         self._max_tags = max_tags
 
     async def suggest_tags(
@@ -118,61 +111,35 @@ class GroqTagger:
         if not text.strip():
             return []
 
-        response = await self._call(self._build_prompt(title, text, vocabulary))
-        return self._parse(response)
+        try:
+            completion = await self._chat.complete(
+                system=_SYSTEM_PROMPT,
+                user=self._build_prompt(title, text, vocabulary),
+                max_tokens=MAX_COMPLETION_TOKENS,
+                # strict=True is constrained decoding: the model is
+                # physically unable to emit anything but JSON matching
+                # this schema. Without it the schema is a suggestion and
+                # a 400 comes back when the model wanders.
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "document_tags",
+                        "strict": True,
+                        "schema": _RESPONSE_SCHEMA,
+                    },
+                },
+            )
+        except LlmError as exc:
+            raise TaggingError(str(exc)) from exc
+
+        return self._parse(completion)
 
     def _build_prompt(self, title: str | None, text: str, vocabulary: list[str]) -> str:
         excerpt = text[:MAX_CHARS_FOR_TAGGING]
         known = ", ".join(vocabulary[:VOCABULARY_LIMIT]) or "(none yet)"
         return f"Existing vocabulary: {known}\n\nTitle: {title or '(none)'}\n\nDocument:\n{excerpt}"
 
-    async def _call(self, prompt: str):
-        last_error: Exception | None = None
-
-        for attempt in range(1, MAX_ATTEMPTS + 1):
-            try:
-                return await self._client.chat.completions.create(
-                    model=self._model,
-                    max_completion_tokens=512,
-                    messages=[
-                        {"role": "system", "content": _SYSTEM_PROMPT},
-                        {"role": "user", "content": prompt},
-                    ],
-                    # strict=True is constrained decoding: the model is
-                    # physically unable to emit anything but JSON matching
-                    # this schema. Without it the schema is a suggestion and
-                    # a 400 comes back when the model wanders.
-                    response_format={
-                        "type": "json_schema",
-                        "json_schema": {
-                            "name": "document_tags",
-                            "strict": True,
-                            "schema": _RESPONSE_SCHEMA,
-                        },
-                    },
-                )
-            except _RETRYABLE as exc:
-                last_error = exc
-                if attempt == MAX_ATTEMPTS:
-                    break
-                delay = _BACKOFF_BASE_SECONDS * (2 ** (attempt - 1))
-                logger.warning(
-                    "groq %s (attempt %d/%d), retrying in %.1fs",
-                    type(exc).__name__,
-                    attempt,
-                    MAX_ATTEMPTS,
-                    delay,
-                )
-                await asyncio.sleep(delay)
-            except Exception as exc:  # auth, bad request, anything else
-                raise TaggingError(f"{type(exc).__name__}: {exc}") from exc
-
-        raise TaggingError(
-            f"Groq unavailable after {MAX_ATTEMPTS} attempts: "
-            f"{type(last_error).__name__}: {last_error}"
-        ) from last_error
-
-    def _parse(self, response) -> list[TagSuggestion]:
+    def _parse(self, completion: Completion) -> list[TagSuggestion]:
         """
         Turn the response into suggestions, refusing anything malformed.
 
@@ -180,19 +147,13 @@ class GroqTagger:
         cut off at max_completion_tokens still parses as JSON often enough
         to be dangerous, so finish_reason is checked first.
         """
-        if not response.choices:
-            raise TaggingError("response contained no choices")
-
-        choice = response.choices[0]
-        if choice.finish_reason not in {"stop", None}:
-            raise TaggingError(f"unusable response: finish_reason={choice.finish_reason}")
-
-        content = choice.message.content
-        if not content:
-            raise TaggingError("response contained no content")
+        if completion.finish_reason not in {"stop", None}:
+            raise TaggingError(
+                f"unusable response: finish_reason={completion.finish_reason}"
+            )
 
         try:
-            payload = json.loads(content)
+            payload = json.loads(completion.text)
         except json.JSONDecodeError as exc:
             raise TaggingError(f"response was not JSON: {exc}") from exc
 
