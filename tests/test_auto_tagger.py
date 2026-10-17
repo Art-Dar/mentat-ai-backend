@@ -98,7 +98,8 @@ def no_sleep(monkeypatch):
     async def instant(_seconds):
         return None
 
-    monkeypatch.setattr("app.services.tagging.auto_tagger.asyncio.sleep", instant)
+    # The backoff moved into the shared LLM client, so the patch follows it.
+    monkeypatch.setattr("app.services.llm.groq_client.asyncio.sleep", instant)
 
 
 def tagger(client, **kwargs) -> GroqTagger:
@@ -305,7 +306,15 @@ async def test_a_bad_api_key_is_not_retried():
 
 @pytest.mark.anyio
 async def test_missing_api_key_names_the_setting(monkeypatch):
-    monkeypatch.setattr("app.services.tagging.auto_tagger.settings.groq_api_key", SecretStr(""))
+    """
+    The key check moved into the shared LLM client, so the patch target
+    follows it. What this pins is unchanged and is the part that matters:
+    a missing key still surfaces as TaggingError, not as LlmError. The
+    ingestion pipeline catches TaggingError and lets the document through
+    untagged — leaking the client's own exception type would turn a
+    missing key into a failed upload.
+    """
+    monkeypatch.setattr("app.services.llm.groq_client.settings.groq_api_key", SecretStr(""))
 
     with pytest.raises(TaggingError, match="GROQ_API_KEY"):
         GroqTagger()
