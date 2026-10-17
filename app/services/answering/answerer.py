@@ -4,10 +4,10 @@ from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.answering.condense import condense_question
 from app.services.answering.answering_context import RetrievalContext, build_retrieval_context
-from app.services.answering.markers import ground_answer
 from app.services.answering.answering_prompt import Turn, build_prompt
+from app.services.answering.condense import condense_question
+from app.services.answering.markers import ground_answer
 from app.services.ingestion.embedder import Embedder
 from app.services.llm.base import ChatClient
 from app.services.retrieval.citations import Citation, build_citations

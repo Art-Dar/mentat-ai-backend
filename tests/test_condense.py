@@ -1,10 +1,10 @@
 import pytest
 
+from app.services.answering.answering_prompt import Turn
 from app.services.answering.condense import (
     MAX_QUERY_CHARS,
     condense_question,
 )
-from app.services.answering.answering_prompt import Turn
 from app.services.llm.base import LlmUnavailable
 from app.services.llm.fake_client import FakeChatClient
 

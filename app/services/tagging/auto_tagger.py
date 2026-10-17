@@ -90,9 +90,7 @@ class GroqTagger:
         """
         try:
             self._chat: ChatClient = (
-                client
-                if hasattr(client, "complete")
-                else GroqChatClient(client, model)  # type: ignore[arg-type]
+                client if hasattr(client, "complete") else GroqChatClient(client, model)  # type: ignore[arg-type]
             )
         except LlmError as exc:
             # A missing API key surfaces as the tagging layer's own error,
@@ -148,9 +146,7 @@ class GroqTagger:
         to be dangerous, so finish_reason is checked first.
         """
         if completion.finish_reason not in {"stop", None}:
-            raise TaggingError(
-                f"unusable response: finish_reason={completion.finish_reason}"
-            )
+            raise TaggingError(f"unusable response: finish_reason={completion.finish_reason}")
 
         try:
             payload = json.loads(completion.text)

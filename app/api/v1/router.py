@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1 import auth, documents, files, health, ingest, search, tags, ask
+from app.api.v1 import ask, auth, documents, files, health, ingest, search, tags
 
 api_router = APIRouter()
 api_router.include_router(health.router, tags=["health"])
