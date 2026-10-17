@@ -6,13 +6,16 @@ from dataclasses import dataclass
 from sqlalchemy import Select, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.models import Chunk, Document
 from app.models.chunk import EMBEDDING_DIM
 from app.services.ingestion.embedder import Embedder, get_embedder
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_TOP_K = 5
+# MAX_TOP_K is a hard ceiling on what a client may request
+# and is not something tuning should be able to raise.
+DEFAULT_TOP_K = settings.retrieval_top_k
 MAX_TOP_K = 100
 
 # pgvector's HNSW search -- default of 40 caps how many candidates

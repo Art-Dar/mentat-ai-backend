@@ -1,0 +1,242 @@
+[
+  {
+    "question": "When is invoice 2026-0042 due?",
+    "answer_spans": [
+      "net 14 days from the invoice date"
+    ],
+    "tags": [
+      "invoice",
+      "precise-fact"
+    ]
+  },
+  {
+    "question": "What is the total on the coffee invoice including VAT?",
+    "answer_spans": [
+      "TOTAL DUE: 8556.00 UAH"
+    ],
+    "tags": [
+      "invoice",
+      "precise-fact"
+    ]
+  },
+  {
+    "question": "Is there a discount for paying the coffee invoice early?",
+    "answer_spans": [
+      "two percent early payment discount"
+    ],
+    "tags": [
+      "invoice",
+      "precise-fact"
+    ]
+  },
+  {
+    "question": "What reference do I have to put on the bank transfer?",
+    "answer_spans": [
+      "Payment reference: INV-2026-0042"
+    ],
+    "tags": [
+      "invoice",
+      "identifier"
+    ]
+  },
+  {
+    "question": "What is the IBAN for Kyiv Coffee Roasters?",
+    "answer_spans": [
+      "UA213223130000026007233566001"
+    ],
+    "tags": [
+      "invoice",
+      "identifier"
+    ]
+  },
+  {
+    "question": "Can I return roasted coffee?",
+    "answer_spans": [
+      "Roasted coffee is not returnable once the vacuum seal"
+    ],
+    "tags": [
+      "invoice",
+      "policy"
+    ]
+  },
+  {
+    "question": "How should green coffee be stored?",
+    "answer_spans": [
+      "between 15 and 20 degrees Celsius"
+    ],
+    "tags": [
+      "invoice",
+      "precise-fact"
+    ]
+  },
+  {
+    "question": "What happens if I pay the coffee invoice late?",
+    "answer_spans": [
+      "double the National Bank of Ukraine discount rate"
+    ],
+    "tags": [
+      "invoice",
+      "policy"
+    ]
+  },
+  {
+    "question": "Why does chunk size matter in a RAG system?",
+    "answer_spans": [
+      "Small chunks give precise matches and lose the surrounding context"
+    ],
+    "tags": [
+      "notes",
+      "explanation"
+    ]
+  },
+  {
+    "question": "Why is recall a bad objective for tuning k?",
+    "answer_spans": [
+      "Raising k raises recall monotonically"
+    ],
+    "tags": [
+      "notes",
+      "explanation"
+    ]
+  },
+  {
+    "question": "Why use MRR instead of recall for this pipeline?",
+    "answer_spans": [
+      "the prompt is filled best first and truncated"
+    ],
+    "tags": [
+      "notes",
+      "explanation"
+    ]
+  },
+  {
+    "question": "What is the recommended chunk overlap?",
+    "answer_spans": [
+      "ten to twenty percent of the chunk size"
+    ],
+    "tags": [
+      "notes",
+      "precise-fact"
+    ]
+  },
+  {
+    "question": "What does overlap cost?",
+    "answer_spans": [
+      "twenty percent more tokens embedded"
+    ],
+    "tags": [
+      "notes",
+      "spread-out"
+    ]
+  },
+  {
+    "question": "What is hybrid retrieval and why would we want it?",
+    "answer_spans": [
+      "reciprocal rank fusion"
+    ],
+    "tags": [
+      "notes",
+      "spread-out"
+    ]
+  },
+  {
+    "question": "How many labelled questions is the minimum for evaluation?",
+    "answer_spans": [
+      "twenty labelled questions"
+    ],
+    "tags": [
+      "notes",
+      "precise-fact"
+    ]
+  },
+  {
+    "question": "Did we decide the knowledge base is shared or per user?",
+    "answer_spans": [
+      "keep the knowledge base per user for now"
+    ],
+    "tags": [
+      "meeting",
+      "decision"
+    ]
+  },
+  {
+    "question": "When is streaming happening?",
+    "answer_spans": [
+      "Streaming for the answer endpoint is deferred to sprint 3"
+    ],
+    "tags": [
+      "meeting",
+      "decision"
+    ]
+  },
+  {
+    "question": "Why are we not adding hybrid search this sprint?",
+    "answer_spans": [
+      "it is a week of work and the sprint is already full"
+    ],
+    "tags": [
+      "meeting",
+      "decision"
+    ]
+  },
+  {
+    "question": "What is the risk with the Groq free tier during the demo?",
+    "answer_spans": [
+      "rate limits aggressively"
+    ],
+    "tags": [
+      "meeting",
+      "spread-out"
+    ]
+  },
+  {
+    "question": "What did Artem take on for sprint 2?",
+    "answer_spans": [
+      "Artem: frontend sources panel, tag chips, hover wiring"
+    ],
+    "tags": [
+      "meeting",
+      "precise-fact"
+    ]
+  },
+  {
+    "question": "How much did the groceries come to?",
+    "answer_spans": [
+      "RAZOM DO SPLATY: 723.00 UAH"
+    ],
+    "tags": [
+      "receipt",
+      "precise-fact"
+    ]
+  },
+  {
+    "question": "How long do I have to return something to ATB?",
+    "answer_spans": [
+      "protyahom 14 dniv"
+    ],
+    "tags": [
+      "receipt",
+      "ukrainian"
+    ]
+  },
+  {
+    "question": "Which card did I pay at ATB with?",
+    "answer_spans": [
+      "Visa ****4417"
+    ],
+    "tags": [
+      "receipt",
+      "identifier"
+    ]
+  },
+  {
+    "question": "How much was the Lavazza coffee at the supermarket?",
+    "answer_spans": [
+      "Lavazza Qualita Oro 1 kg ..... 249.00"
+    ],
+    "tags": [
+      "receipt",
+      "precise-fact"
+    ]
+  }
+]

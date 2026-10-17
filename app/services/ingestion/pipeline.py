@@ -49,8 +49,7 @@ async def process_document(
 
         try:
             _normalize(document)
-            chunks = await _rechunk(document, db)
-            await _embed(chunks, embedder or get_embedder())
+            await rechunk_and_embed(db, document, embedder or get_embedder())
             await _assign_tags(document, db, tagger)
             document.status = IngestionStatus.COMPLETED
             document.error_message = None
@@ -76,9 +75,35 @@ def _normalize(document: Document) -> None:
     document.content_hash = sha256(result.text.encode("utf-8")).hexdigest()
 
 
-async def _rechunk(document: Document, db: AsyncSession) -> list[Chunk]:
+async def rechunk_and_embed(
+    db: AsyncSession,
+    document: Document,
+    embedder: Embedder,
+    *,
+    chunk_size: int | None = None,
+    chunk_overlap: int | None = None,
+) -> list[Chunk]:
+    """
+    Replace a document's chunks and their vectors.
+    """
+    chunks = await _rechunk(document, db, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+    await _embed(chunks, embedder)
+    return chunks
+
+
+async def _rechunk(
+    document: Document,
+    db: AsyncSession,
+    *,
+    chunk_size: int | None = None,
+    chunk_overlap: int | None = None,
+) -> list[Chunk]:
     """Replace this document's chunks. Embeddings stay NULL until the
-    embedding stage fills them."""
+    embedding stage fills them.
+    """
+    size = chunk_size if chunk_size is not None else settings.chunk_size
+    overlap = chunk_overlap if chunk_overlap is not None else settings.chunk_overlap
+
     await db.execute(delete(Chunk).where(Chunk.document_id == document.id))
 
     chunks = [
@@ -89,9 +114,12 @@ async def _rechunk(document: Document, db: AsyncSession) -> list[Chunk]:
             start_char=piece.start_char,
             end_char=piece.end_char,
         )
-        for piece in chunk_text(document.content or "")
+        for piece in chunk_text(document.content or "", chunk_size=size, overlap=overlap)
     ]
     db.add_all(chunks)
+
+    document.chunk_size = size
+    document.chunk_overlap = overlap
     return chunks
 
 

@@ -88,6 +88,8 @@ Docker container up **_NOT_** required:
 * Testing markers: ``poetry run pytest tests/test_markers.py -v``
 * Testing llm client (conversational): ``poetry run pytest tests/test_llm_client.py -v``
 * Testing condense: ``poetry run pytest tests/test_condense.py -v``
+* Testing chunk evaluation script: ``poetry run pytest tests/test_evaluation.py -v``
+* Testing lexical embedder: ``poetry run pytest tests/test_lexical_embedder.py -v``
 
 Docker container up required:
 * Testing ingest: `` poetry run pytest tests/test_ingest.py -v``

@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     storage_access_key: str = ""
     storage_secret_key: SecretStr = SecretStr("")
     storage_region: str = "auto"
+    chunk_size: int = 1000
+    chunk_overlap: int = 150
+    retrieval_top_k: int = 5
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
