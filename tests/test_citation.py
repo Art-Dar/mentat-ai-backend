@@ -15,15 +15,13 @@ from app.services.retrieval.search import SearchHit
 
 
 class FakeDocument:
-    def __init__(
-        self,
-        *,
-        page_map=None,
-        source=DocumentSource.PDF,
-        title="Invoice",
-        url=None,
-        original_filename=None,
-    ):
+    """
+    build_citation reads five attributes and nothing else, so a real row
+    would add a database round trip per test for no extra coverage.
+    """
+
+    def __init__(self, *, page_map=None, source=DocumentSource.PDF, title="Invoice",
+                 url=None, original_filename=None):
         self.page_map = page_map
         self.source = source
         self.title = title
@@ -83,6 +81,14 @@ def test_a_chunk_that_merely_abuts_a_page_does_not_cite_it():
     """
     pages, _ = _pages_for_span(0, 770, pdf_pages((0, 770), (770, 1540)))
     assert pages == (1,), "the chunk ends exactly where page 2 begins"
+
+
+def test_a_chunk_starting_where_a_page_ended_does_not_cite_that_page():
+    """
+    The mirror image of the test above, and the half that was missing.
+    """
+    pages, _ = _pages_for_span(770, 1540, pdf_pages((0, 770), (770, 1540)))
+    assert pages == (2,), "the chunk starts exactly where page 1 ended"
 
 
 def test_a_document_without_a_page_map_has_no_pages():
@@ -148,8 +154,7 @@ def test_confidence_across_pages_is_the_worst_one_not_the_average():
     """
     document = FakeDocument(
         page_map=pdf_pages(
-            (0, 770),
-            (772, 1542),
+            (0, 770), (772, 1542),
             ocr_pages=(0, 1),
             confidences={0: 95.0, 1: 41.0},
         )
@@ -186,9 +191,8 @@ def test_a_quote_too_short_to_identify_anything_links_plainly():
     """
     A fragment matching the first "the" on the page is worse than none.
     """
-    document = FakeDocument(
-        page_map=None, source=DocumentSource.ARTICLE, url="https://example.com/x"
-    )
+    document = FakeDocument(page_map=None, source=DocumentSource.ARTICLE,
+                            url="https://example.com/x")
     citation = build_citation(hit(0, 5, "ok ok"), document, "[1]")
     assert citation.url == "https://example.com/x"
 
@@ -203,9 +207,8 @@ def test_a_long_chunk_is_quoted_at_a_word_boundary():
 
 
 def test_newlines_are_flattened_so_a_prompt_block_stays_readable():
-    citation = build_citation(
-        hit(0, 40, "line one\n\nline  two\tline three"), FakeDocument(), "[1]"
-    )
+    citation = build_citation(hit(0, 40, "line one\n\nline  two\tline three"),
+                              FakeDocument(), "[1]")
     assert citation.quote == "line one line two line three"
 
 
@@ -216,22 +219,10 @@ def test_an_untitled_document_falls_back_to_its_filename():
 
 def _citation(**overrides) -> Citation:
     base = dict(
-        marker="[1]",
-        document_id=uuid.uuid4(),
-        chunk_id=uuid.uuid4(),
-        chunk_index=0,
-        title="Invoice 2026-0042",
-        source=DocumentSource.PDF,
-        locator="page 3",
-        pages=(3,),
-        page_count=12,
-        start_char=0,
-        end_char=100,
-        from_ocr=False,
-        ocr_confidence=None,
-        similarity=0.9,
-        url=None,
-        quote="Total 349.50 UAH",
+        marker="[1]", document_id=uuid.uuid4(), chunk_id=uuid.uuid4(), chunk_index=0,
+        title="Invoice 2026-0042", source=DocumentSource.PDF, locator="page 3",
+        pages=(3,), page_count=12, start_char=0, end_char=100, from_ocr=False,
+        ocr_confidence=None, similarity=0.9, url=None, quote="Total 349.50 UAH",
     )
     return Citation(**{**base, **overrides})
 
