@@ -32,6 +32,8 @@ class Citation:
     # Human-readable, already formatted: "page 12", "pages 3-4",
     # "characters 1,200-2,200". This is the string a UI shows.
     locator: str
+    # 1-BASED page numbers, because page_map is 0-based and nobody counts
+    # pages from zero. Empty for sources that have no pages at all.
     pages: tuple[int, ...]
     page_count: int
 
@@ -54,6 +56,18 @@ class Citation:
         if len(self.pages) == 1:
             return f"page {self.pages[0]}"
         return f"pages {self.pages[0]}-{self.pages[-1]}"
+
+
+@dataclass(frozen=True)
+class SpanProvenance:
+    """
+    Where a character span sits in a document, and how it got there.
+    """
+
+    pages: tuple[int, ...]
+    page_count: int
+    from_ocr: bool
+    ocr_confidence: float | None
 
 
 def _pages_for_span(
@@ -86,6 +100,22 @@ def _ocr_provenance(
         float(page["mean_confidence"]) for page in cited if page.get("mean_confidence") is not None
     ]
     return from_ocr, (min(scores) if scores else None)
+
+
+def span_provenance(start_char: int, end_char: int, page_map: list[dict] | None) -> SpanProvenance:
+    """
+    One implementation, two callers: build_citation here, and the passage
+    context endpoint. Anything that shows a user a page number for a
+    character range goes through this.
+    """
+    pages, page_count = _pages_for_span(start_char, end_char, page_map)
+    from_ocr, confidence = _ocr_provenance(pages, page_map)
+    return SpanProvenance(
+        pages=pages,
+        page_count=page_count,
+        from_ocr=from_ocr,
+        ocr_confidence=confidence,
+    )
 
 
 def _text_fragment_url(url: str | None, quote: str) -> str | None:
@@ -123,8 +153,8 @@ def _quote(content: str) -> str:
 
 def build_citation(hit: SearchHit, document: Document, marker: str) -> Citation:
     """One citation. Separate from build_citations so it is testable alone."""
-    pages, page_count = _pages_for_span(hit.start_char, hit.end_char, document.page_map)
-    from_ocr, confidence = _ocr_provenance(pages, document.page_map)
+    provenance = span_provenance(hit.start_char, hit.end_char, document.page_map)
+    pages = provenance.pages
     quote = _quote(hit.content)
 
     title = document.title or document.original_filename or "Untitled"
@@ -138,11 +168,11 @@ def build_citation(hit: SearchHit, document: Document, marker: str) -> Citation:
         source=document.source,
         locator=_locator(document.source, pages, hit.start_char, hit.end_char),
         pages=pages,
-        page_count=page_count,
+        page_count=provenance.page_count,
         start_char=hit.start_char,
         end_char=hit.end_char,
-        from_ocr=from_ocr,
-        ocr_confidence=confidence,
+        from_ocr=provenance.from_ocr,
+        ocr_confidence=provenance.ocr_confidence,
         similarity=hit.similarity,
         url=_text_fragment_url(document.url, quote),
         quote=quote,

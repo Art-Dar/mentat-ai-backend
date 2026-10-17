@@ -15,6 +15,11 @@ from app.services.retrieval.search import SearchHit
 
 
 class FakeDocument:
+    """
+    build_citation reads five attributes and nothing else, so a real row
+    would add a database round trip per test for no extra coverage.
+    """
+
     def __init__(
         self,
         *,
@@ -83,6 +88,14 @@ def test_a_chunk_that_merely_abuts_a_page_does_not_cite_it():
     """
     pages, _ = _pages_for_span(0, 770, pdf_pages((0, 770), (770, 1540)))
     assert pages == (1,), "the chunk ends exactly where page 2 begins"
+
+
+def test_a_chunk_starting_where_a_page_ended_does_not_cite_that_page():
+    """
+    The mirror image of the test above, and the half that was missing.
+    """
+    pages, _ = _pages_for_span(770, 1540, pdf_pages((0, 770), (770, 1540)))
+    assert pages == (2,), "the chunk starts exactly where page 1 ended"
 
 
 def test_a_document_without_a_page_map_has_no_pages():

@@ -2,6 +2,7 @@ import uuid
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.answer import RetrievalRead
 from app.schemas.base import RequestSchema
 from app.services.retrieval.search import DEFAULT_TOP_K, MAX_TOP_K
 
@@ -40,6 +41,10 @@ class SearchResponse(BaseModel):
     model_config = STRICT
 
     query: str
+    # Echoed back because the default lives on the server. A client that
+    # sent nothing still learns what limit was applied, which is what makes
+    # "is this all of it?" answerable without reading the docs.
     top_k: int
     count: int
     hits: list[SearchHitRead]
+    retrieval: RetrievalRead

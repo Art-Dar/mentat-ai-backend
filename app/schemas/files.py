@@ -75,4 +75,10 @@ class FileLinkResponse(BaseModel):
     model_config = STRICT
 
     url: str
+    # `expires_in` is returned so the client can cache the URL — and so
+    # it knows to re-fetch on click rather than at render time.
     expires_in: int
+    media_type: str
+    # The name the user uploaded, for a download affordance to label
+    filename: str | None = None
+    page_count: int = 0
