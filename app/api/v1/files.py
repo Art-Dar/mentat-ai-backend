@@ -9,6 +9,7 @@ from fastapi import (
     File,
     Form,
     HTTPException,
+    Query,
     UploadFile,
     status,
 )
@@ -67,6 +68,18 @@ _IMAGE_MAGIC: tuple[tuple[bytes, str, str], ...] = (
 )
 _WEBP = ("webp", "image/webp")
 _ACCEPTED_IMAGES = "PNG, JPEG, WEBP or TIFF"
+
+# Built from the same table the upload path matches magic bytes against,
+# so the media type we hand back on download cannot drift from the one we
+# stored. The storage key's extension is the record of what was detected:
+# it was derived from the file's own bytes, never from the request.
+_MEDIA_TYPE_BY_EXTENSION: dict[str, str] = {
+    extension: media_type for _, extension, media_type in _IMAGE_MAGIC
+}
+_MEDIA_TYPE_BY_EXTENSION[_WEBP[0]] = _WEBP[1]
+_MEDIA_TYPE_BY_EXTENSION["pdf"] = "application/pdf"
+
+_PDF_MEDIA_TYPE = "application/pdf"
 
 # Tesseract language codes
 # three letters, joined by + for multi-language pages ("eng+ukr")
@@ -379,9 +392,25 @@ async def ingest_image(
     )
 
 
+def _media_type_for(storage_key_value: str) -> str:
+    """
+    Falls back to application/octet-stream rather than guessing: a client
+    that cannot tell what it received will offer a download, which is the
+    safe wrong answer. Claiming application/pdf for something else would
+    be the unsafe one.
+    """
+    _, _, extension = storage_key_value.rpartition(".")
+    return _MEDIA_TYPE_BY_EXTENSION.get(extension.lower(), "application/octet-stream")
+
+
 @router.get("/documents/{document_id}/file", response_model=FileLinkResponse)
 async def get_document_file_link(
     document_id: uuid.UUID,
+    page: int | None = Query(
+        default=None,
+        ge=1,
+        description="open a PDF at this 1-based page, e.g. citation.pages[0]",
+    ),
     db: AsyncSession = Depends(get_db),
     user_id: uuid.UUID = Depends(get_current_user_id),
     store: FileStore = Depends(get_file_store),
@@ -392,6 +421,12 @@ async def get_document_file_link(
     Returns a URL rather than the bytes. A presigned URL is served by R2
     directly, so a worker is not tied up streaming a 20 MB scan — and the
     authorization decision still happens here, before the URL exists.
+
+    With `page`, the URL carries a `#page=N` fragment, which opens a PDF
+    at that page in every built-in browser viewer. Without it the user
+    lands on page 1 of a forty-page invoice holding a citation that says
+    "page 31" — a reference that points at the file rather than into it,
+    which is the thing this story exists to fix.
     """
     missing = HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
@@ -411,6 +446,15 @@ async def get_document_file_link(
     if document.user_id != user_id:
         raise missing
 
+    media_type = _media_type_for(document.storage_key)
+    page_count = len(document.page_map or [])
+
+    if page is not None and page_count and page > page_count:
+        raise HTTPException(
+            status_code=_UNPROCESSABLE,
+            detail=f"This document has {page_count} page(s); page {page} does not exist",
+        )
+
     try:
         url = await store.url_for(document.storage_key, expires_in=DEFAULT_URL_TTL_SECONDS)
     except ObjectNotFound as exc:
@@ -423,4 +467,17 @@ async def get_document_file_link(
             detail="File storage is unavailable",
         ) from exc
 
-    return FileLinkResponse(url=url, expires_in=DEFAULT_URL_TTL_SECONDS)
+    # Appended after signing, deliberately. A fragment is never sent to
+    # the server, so it is outside the signature by definition and adding
+    # it cannot invalidate one. It is also dropped for anything but a PDF
+    # rather than rejected
+    if page is not None and media_type == _PDF_MEDIA_TYPE:
+        url = f"{url}#page={page}"
+
+    return FileLinkResponse(
+        url=url,
+        expires_in=DEFAULT_URL_TTL_SECONDS,
+        media_type=media_type,
+        filename=document.original_filename,
+        page_count=page_count,
+    )
