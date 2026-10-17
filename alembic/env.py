@@ -20,7 +20,13 @@ if config.config_file_name is not None:
 
 from app.core.config import settings
 from app.core.db import Base
-from app.models import chunk, document, tag, user  # noqa: F401  (registers User on Base.metadata)
+from app.models import (  # noqa: F401  (registers User on Base.metadata)
+    chunk,
+    conversation,
+    document,
+    tag,
+    user,
+)
 
 target_metadata = Base.metadata
 config.set_main_option("sqlalchemy.url", settings.database_url.replace("+asyncpg", ""))

@@ -3,7 +3,16 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    text,
+)
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -40,6 +49,12 @@ class Document(Base):
         Index("ix_documents_user_created", "user_id", "created_at"),
         Index("ix_documents_user_content_hash", "user_id", "content_hash"),
         Index("ix_documents_url", "url"),
+        Index(
+            "ix_documents_storage_key",
+            "storage_key",
+            unique=True,
+            postgresql_where=text("storage_key IS NOT NULL"),
+        ),
         CheckConstraint(
             "(status = 'failed') = (error_message IS NOT NULL)",
             name="ck_documents_error_message_iff_failed",

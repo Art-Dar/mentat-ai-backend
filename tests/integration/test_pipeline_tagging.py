@@ -241,7 +241,10 @@ async def test_no_api_key_costs_the_tags_not_the_document(captured, monkeypatch)
     makes the pipeline build the real one, which refuses without a key —
     and that refusal is absorbed.
     """
-    monkeypatch.setattr("app.services.tagging.auto_tagger.settings.groq_api_key", SecretStr(""))
+    # Patch target follows the key check into the shared LLM client. What
+    # is being pinned is unchanged: no key costs the tags, never the
+    # document.
+    monkeypatch.setattr("app.services.llm.groq_client.settings.groq_api_key", SecretStr(""))
     document_id = await captured()
 
     await process_document(document_id, embedder=FakeEmbedder())

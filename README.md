@@ -86,6 +86,8 @@ Docker container up **_NOT_** required:
 * Testing answering prompt (+injection): ``poetry run pytest tests/test_prompt.py -v ``
 * Testing passage script: ``poetry run pytest tests/test_passage.py -v``
 * Testing markers: ``poetry run pytest tests/test_markers.py -v``
+* Testing llm client (conversational): ``poetry run pytest tests/test_llm_client.py -v``
+* Testing condense: ``poetry run pytest tests/test_condense.py -v``
 
 Docker container up required:
 * Testing ingest: `` poetry run pytest tests/test_ingest.py -v``
@@ -106,6 +108,8 @@ Docker container up required:
 * Testing passage api: `` poetry run pytest tests/test_passage.py -v  ``
 * Testing document file link: ``poetry run pytest tests/test_markers.py -v``
 * Testing frontend contract: ``poetry run pytest tests/test_frontend_contract.py -v`` 
+* Testing answerer integration: ``poetry run pytest tests/ingestion/test_answerer.py -v``
+* Testing conversation api: ``poetry run pytest tests/test_conversations_api.py -v``
 
 Manual run of the pdf processing and storing: ``poetry run python -m scripts.check_pdf_storage ingest docs\sample-invoice.pdf``
 Manual run of the image processing and storing: ``poetry run python -m scripts.check_image_ocr ingest docs/receipt.jpg``
