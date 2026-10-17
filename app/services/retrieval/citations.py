@@ -97,16 +97,12 @@ def _ocr_provenance(
     cited = [page for page in page_map if int(page["index"]) + 1 in pages]
     from_ocr = any(page.get("source") == "ocr" for page in cited)
     scores = [
-        float(page["mean_confidence"])
-        for page in cited
-        if page.get("mean_confidence") is not None
+        float(page["mean_confidence"]) for page in cited if page.get("mean_confidence") is not None
     ]
     return from_ocr, (min(scores) if scores else None)
 
 
-def span_provenance(
-    start_char: int, end_char: int, page_map: list[dict] | None
-) -> SpanProvenance:
+def span_provenance(start_char: int, end_char: int, page_map: list[dict] | None) -> SpanProvenance:
     """
     One implementation, two callers: build_citation here, and the passage
     context endpoint. Anything that shows a user a page number for a
@@ -191,9 +187,7 @@ async def build_citations(db: AsyncSession, hits: list[SearchHit]) -> list[Citat
         return []
 
     document_ids = {hit.document_id for hit in hits}
-    rows = (
-        await db.execute(select(Document).where(Document.id.in_(document_ids)))
-    ).scalars().all()
+    rows = (await db.execute(select(Document).where(Document.id.in_(document_ids)))).scalars().all()
     documents = {document.id: document for document in rows}
 
     citations: list[Citation] = []

@@ -115,9 +115,7 @@ def offline():
 @pytest.fixture
 def auth_headers(client, seeded_user):
     email, password = seeded_user
-    response = client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    )
+    response = client.post("/api/v1/auth/login", json={"email": email, "password": password})
     assert response.status_code == 200
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
@@ -207,9 +205,7 @@ def test_a_tag_reference_has_exactly_the_documented_keys(retrieval):
     assert set(retrieval["documents"][0]["tags"][0]) == TAG_REF_KEYS
 
 
-def test_a_passage_has_exactly_the_documented_keys(
-    client, auth_headers, library, retrieval
-):
+def test_a_passage_has_exactly_the_documented_keys(client, auth_headers, library, retrieval):
     citation = retrieval["citations"][0]
     body = client.get(
         f"/api/v1/documents/{library.id}/passage",
@@ -221,9 +217,7 @@ def test_a_passage_has_exactly_the_documented_keys(
 
 
 def test_a_file_link_has_exactly_the_documented_keys(client, auth_headers, library):
-    body = client.get(
-        f"/api/v1/documents/{library.id}/file", headers=auth_headers
-    ).json()
+    body = client.get(f"/api/v1/documents/{library.id}/file", headers=auth_headers).json()
 
     assert set(body) == FILE_LINK_KEYS, set(body) ^ FILE_LINK_KEYS
 
@@ -273,9 +267,7 @@ def test_markers_join_the_prose_to_the_chips(retrieval):
     chunks come from one document, so its chip must carry both markers.
     """
     assert retrieval["document_count"] == 1
-    assert retrieval["documents"][0]["markers"] == [
-        c["marker"] for c in retrieval["citations"]
-    ]
+    assert retrieval["documents"][0]["markers"] == [c["marker"] for c in retrieval["citations"]]
     assert retrieval["documents"][0]["locator"] == "pages 1-2"
     assert retrieval["documents"][0]["from_ocr"] is True
 

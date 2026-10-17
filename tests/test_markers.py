@@ -193,7 +193,6 @@ def test_a_reconciled_answer_is_immutable():
     )
 
 
-
 def test_the_result_is_frozen():
     """An answer that has been reconciled should not then be edited."""
     grounded = ground_answer("Total [1].", THREE)
