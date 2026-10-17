@@ -80,8 +80,9 @@ Docker container up **_NOT_** required:
 * Test storage script (fake): ``poetry run pytest tests/test_storage.py``
 * Test pdf file ingestion: ``poetry run pytest tests/test_ingest_file.py``
 * Testing auto tagging: `` poetry run pytest tests/test_auto_tagger.py -v``
-* Test image (OCR) extractor: `` poetry run pytest tests/test_ocr.py -v``
-* Test scanned pdfs: ``poetry run pytest tests/test_scanned_pdf.py -v``
+* Testing image (OCR) extractor: `` poetry run pytest tests/test_ocr.py -v``
+* Testing scanned pdfs: ``poetry run pytest tests/test_scanned_pdf.py -v``
+* Testing citation retrieval script: ``poetry run pytest tests/test_citation.py -v``
 
 Docker container up required:
 * Testing ingest: `` poetry run pytest tests/test_ingest.py -v``
@@ -95,6 +96,7 @@ Docker container up required:
 * Testing image ingestion (tesseract engine needed): `` poetry run pytest tests/test_ingest_image.py -v ``
 * Testing document status: ``poetry run pytest tests/test_document_status.py -v``
 * Testing tagging delete form vocabulary: `` poetry run pytest tests/test_tag_delete.py -v``
+* Testing integrational citation: ``poetry run pytest tests/integration/test_citations.py -v``
 
 Manual run of the pdf processing and storing: ``poetry run python -m scripts.check_pdf_storage ingest docs\sample-invoice.pdf``
 Manual run of the image processing and storing: ``poetry run python -m scripts.check_image_ocr ingest docs/receipt.jpg``
