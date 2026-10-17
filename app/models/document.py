@@ -92,3 +92,5 @@ class Document(Base):
     file_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
     original_filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
     page_map: Mapped[list[dict] | None] = mapped_column(JSONB, nullable=True)
+    chunk_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    chunk_overlap: Mapped[int | None] = mapped_column(Integer, nullable=True)
