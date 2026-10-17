@@ -41,6 +41,7 @@ class SearchHit:
 def _build_query(
     query_vector: list[float],
     top_k: int,
+    user_id: uuid.UUID,
     document_ids: Sequence[uuid.UUID] | None,
 ) -> Select:
     # .label() so the same expression can be reused in ORDER BY without
@@ -61,6 +62,7 @@ def _build_query(
         )
         .join(Document, Document.id == Chunk.document_id)
         .where(Chunk.embedding.is_not(None))
+        .where(Document.user_id == user_id)
         .order_by(distance)
         .limit(top_k)
     )
@@ -77,6 +79,7 @@ async def search_chunks(
     db: AsyncSession,
     query_vector: list[float],
     *,
+    user_id: uuid.UUID,
     top_k: int = DEFAULT_TOP_K,
     min_similarity: float = 0.0,
     document_ids: Sequence[uuid.UUID] | None = None,
@@ -86,8 +89,9 @@ async def search_chunks(
     `min_similarity` drops weak matches
     0.0 keeps everything with a non-negative score
 
-    `document_ids` scopes the search — for "search within this article",
-    or for a conversation already pinned to a few sources.
+    `document_ids` narrows further within that user's own documents — for
+    "search within this article", or for a conversation already pinned to
+    a few sources.
     """
     if len(query_vector) != EMBEDDING_DIM:
         raise ValueError(
@@ -102,7 +106,7 @@ async def search_chunks(
         # not make every later query in the session slow too.
         await db.execute(text(f"SET LOCAL hnsw.ef_search = {min(top_k * 4, 1000)}"))
 
-    rows = (await db.execute(_build_query(query_vector, top_k, document_ids))).all()
+    rows = (await db.execute(_build_query(query_vector, top_k, user_id, document_ids))).all()
 
     hits = [
         SearchHit(
@@ -125,6 +129,7 @@ async def search_by_text(
     db: AsyncSession,
     query: str,
     *,
+    user_id: uuid.UUID,
     embedder: Embedder | None = None,
     top_k: int = DEFAULT_TOP_K,
     min_similarity: float = 0.0,
@@ -146,6 +151,7 @@ async def search_by_text(
     return await search_chunks(
         db,
         query_vector,
+        user_id=user_id,
         top_k=top_k,
         min_similarity=min_similarity,
         document_ids=document_ids,
