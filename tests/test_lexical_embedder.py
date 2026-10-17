@@ -92,9 +92,7 @@ async def test_a_question_lands_nearest_the_passage_that_answers_it(embedder):
     vectors = await embedder.embed_documents(CORPUS)
     query = await embedder.embed_query("how should green coffee be stored?")
 
-    ranked = sorted(
-        range(len(CORPUS)), key=lambda i: cosine(query, vectors[i]), reverse=True
-    )
+    ranked = sorted(range(len(CORPUS)), key=lambda i: cosine(query, vectors[i]), reverse=True)
     assert "15 and 20 degrees" in CORPUS[ranked[0]]
 
 

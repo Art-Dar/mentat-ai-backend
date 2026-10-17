@@ -111,9 +111,7 @@ def load_goldset(path: str | pathlib.Path) -> tuple[GoldQuestion, ...]:
     return tuple(questions)
 
 
-def check_spans_exist(
-    questions: tuple[GoldQuestion, ...], corpus: dict[str, str]
-) -> list[str]:
+def check_spans_exist(questions: tuple[GoldQuestion, ...], corpus: dict[str, str]) -> list[str]:
     """
     Which labels cannot possibly be matched by any document in the corpus.
     """

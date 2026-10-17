@@ -85,14 +85,18 @@ def _ints(raw: str) -> list[int]:
 async def _corpus(user_id: str) -> dict[str, str]:
     async with AsyncSessionLocal() as db:
         rows = (
-            await db.execute(
-                select(Document).where(
-                    Document.user_id == user_id,
-                    Document.status == IngestionStatus.COMPLETED,
-                    Document.content.isnot(None),
+            (
+                await db.execute(
+                    select(Document).where(
+                        Document.user_id == user_id,
+                        Document.status == IngestionStatus.COMPLETED,
+                        Document.content.isnot(None),
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
     return {str(d.id): (d.content or "") for d in rows}
 
 
@@ -100,14 +104,18 @@ async def _reindex(user_id: str, chunk_size: int, overlap: int, embedder) -> int
     """Re-chunk and re-embed the whole corpus at one setting."""
     async with AsyncSessionLocal() as db:
         documents = (
-            await db.execute(
-                select(Document).where(
-                    Document.user_id == user_id,
-                    Document.status == IngestionStatus.COMPLETED,
-                    Document.content.isnot(None),
+            (
+                await db.execute(
+                    select(Document).where(
+                        Document.user_id == user_id,
+                        Document.status == IngestionStatus.COMPLETED,
+                        Document.content.isnot(None),
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         total = 0
         for document in documents:
@@ -137,9 +145,7 @@ async def _evaluate(user_id, gold, chunk_size, overlap, k, embedder, chunk_count
             )
             latency_ms = (time.perf_counter() - started) * 1000
             results.append(
-                score_question(
-                    question, [hit.content for hit in hits], latency_ms=latency_ms
-                )
+                score_question(question, [hit.content for hit in hits], latency_ms=latency_ms)
             )
 
     return EvaluationResult(
@@ -259,19 +265,26 @@ async def run(args: argparse.Namespace) -> int:
     best_recall = max(candidates, key=lambda r: (r.recall, -r.mean_context_chars))
     logger.info(
         "Best MRR:    size=%d overlap=%d k=%d (MRR %.3f, recall %.3f)",
-        best_mrr.chunk_size, best_mrr.chunk_overlap, best_mrr.top_k,
-        best_mrr.mrr, best_mrr.recall,
+        best_mrr.chunk_size,
+        best_mrr.chunk_overlap,
+        best_mrr.top_k,
+        best_mrr.mrr,
+        best_mrr.recall,
     )
     logger.info(
         "Best recall: size=%d overlap=%d k=%d (recall %.3f, %.0f ctx chars)",
-        best_recall.chunk_size, best_recall.chunk_overlap, best_recall.top_k,
-        best_recall.recall, best_recall.mean_context_chars,
+        best_recall.chunk_size,
+        best_recall.chunk_overlap,
+        best_recall.top_k,
+        best_recall.recall,
+        best_recall.mean_context_chars,
     )
 
     if best_mrr.misses:
         logger.info("")
-        logger.info("Still missed by the best setting (%d of %d):",
-                    len(best_mrr.misses), best_mrr.questions)
+        logger.info(
+            "Still missed by the best setting (%d of %d):", len(best_mrr.misses), best_mrr.questions
+        )
         for miss in best_mrr.misses:
             label = f" [{', '.join(miss.tags)}]" if miss.tags else ""
             logger.info("  %s%s", miss.question, label)
@@ -316,15 +329,19 @@ async def run(args: argparse.Namespace) -> int:
         logger.info("Wrote %s", args.json)
 
     logger.info("")
-    logger.info("The corpus is now chunked at size=%d overlap=%d — the LAST setting",
-                results[-1].chunk_size, results[-1].chunk_overlap)
+    logger.info(
+        "The corpus is now chunked at size=%d overlap=%d — the LAST setting",
+        results[-1].chunk_size,
+        results[-1].chunk_overlap,
+    )
     logger.info("tried, not the best one. Run scripts/backfill_chunks.py to put it")
     logger.info("back to whatever settings.chunk_size says.")
     if args.offline:
         logger.info("")
         logger.info("OFFLINE RUN — these numbers come from a lexical embedder, not")
-        logger.info("%s. Re-run without --offline before changing a setting.",
-                    settings.embedding_model)
+        logger.info(
+            "%s. Re-run without --offline before changing a setting.", settings.embedding_model
+        )
     return 0
 
 

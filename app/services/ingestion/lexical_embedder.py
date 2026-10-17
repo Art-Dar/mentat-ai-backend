@@ -52,8 +52,7 @@ class LexicalEmbedder:
             )
         if components < self.dimension:
             logger.info(
-                "lexical embedder: %d components from a %d-document corpus "
-                "(padded to %d)",
+                "lexical embedder: %d components from a %d-document corpus (padded to %d)",
                 components,
                 matrix.shape[0],
                 self.dimension,

@@ -35,8 +35,11 @@ def result(hit_ranks, *, chunk_size=1000, overlap=150, k=5, chunks=200, ctx=2000
                 # the span, built so the rank being measured is the rank
                 # the fixture asked for.
                 [
-                    ("net 14 days from the invoice" if rank is not None and j + 1 == rank
-                     else "unrelated filler text about something else entirely")
+                    (
+                        "net 14 days from the invoice"
+                        if rank is not None and j + 1 == rank
+                        else "unrelated filler text about something else entirely"
+                    )
                     for j in range(k)
                 ],
                 latency_ms=10.0 + i,
@@ -132,9 +135,7 @@ def test_a_span_too_short_to_identify_anything_is_refused(tmp_path):
     looks stable is worse than one that looks wrong.
     """
     with pytest.raises(GoldSetError, match="too short"):
-        load_goldset(
-            write(tmp_path, [{"question": "what is the total?", "answer_spans": ["480"]}])
-        )
+        load_goldset(write(tmp_path, [{"question": "what is the total?", "answer_spans": ["480"]}]))
 
 
 def test_a_single_span_may_be_given_as_a_string(tmp_path):
@@ -266,9 +267,7 @@ def test_retrieval_larger_than_the_prompt_budget_is_flagged():
         chunk_overlap=300,
         top_k=20,
         chunk_count=200,
-        results=(
-            score_question(gold(), ["x" * (MAX_CONTEXT_CHARS + 1000)], latency_ms=1.0),
-        ),
+        results=(score_question(gold(), ["x" * (MAX_CONTEXT_CHARS + 1000)], latency_ms=1.0),),
     )
     assert over.exceeds_prompt_budget is True
 
@@ -282,9 +281,7 @@ def test_the_misses_are_reported_not_only_counted():
 
 
 def test_the_table_flags_what_cannot_be_trusted():
-    table = format_table(
-        [result([1], k=5, chunks=6), result([1], k=5, chunks=400)]
-    )
+    table = format_table([result([1], k=5, chunks=6), result([1], k=5, chunks=400)])
     assert "k covers the corpus" in table
     assert table.count("k covers the corpus") == 1
 

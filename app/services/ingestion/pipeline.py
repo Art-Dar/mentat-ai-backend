@@ -86,9 +86,7 @@ async def rechunk_and_embed(
     """
     Replace a document's chunks and their vectors.
     """
-    chunks = await _rechunk(
-        document, db, chunk_size=chunk_size, chunk_overlap=chunk_overlap
-    )
+    chunks = await _rechunk(document, db, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
     await _embed(chunks, embedder)
     return chunks
 

@@ -64,9 +64,7 @@ def parse_args() -> argparse.Namespace:
         "chunking — for when the embedding MODEL changed, not the chunking",
     )
     parser.add_argument("--limit", type=int, default=None, help="stop after N documents")
-    parser.add_argument(
-        "--user-id", default=None, help="restrict to one user's documents"
-    )
+    parser.add_argument("--user-id", default=None, help="restrict to one user's documents")
     parser.add_argument(
         "--offline",
         action="store_true",
@@ -93,9 +91,9 @@ async def plan(args: argparse.Namespace) -> None:
     async with AsyncSessionLocal() as db:
         total = (
             await db.execute(
-                select(func.count()).select_from(Document).where(
-                    Document.status == IngestionStatus.COMPLETED
-                )
+                select(func.count())
+                .select_from(Document)
+                .where(Document.status == IngestionStatus.COMPLETED)
             )
         ).scalar_one()
 
@@ -103,14 +101,11 @@ async def plan(args: argparse.Namespace) -> None:
         if args.limit:
             documents = documents[: args.limit]
 
-        current_chunks = (
-            await db.execute(select(func.count()).select_from(Chunk))
-        ).scalar_one()
+        current_chunks = (await db.execute(select(func.count()).select_from(Chunk))).scalar_one()
 
         characters = sum(len(d.content or "") for d in documents)
         projected = sum(
-            len(chunk_text(d.content or "", args.chunk_size, args.chunk_overlap))
-            for d in documents
+            len(chunk_text(d.content or "", args.chunk_size, args.chunk_overlap)) for d in documents
         )
 
     logger.info("Target chunking: size=%d overlap=%d", args.chunk_size, args.chunk_overlap)
@@ -142,8 +137,12 @@ async def backfill(args: argparse.Namespace) -> int:
         logger.info("Nothing to do: every document is already at the target chunking.")
         return 0
 
-    logger.info("Re-chunking %d document(s) to size=%d overlap=%d",
-                len(documents), args.chunk_size, args.chunk_overlap)
+    logger.info(
+        "Re-chunking %d document(s) to size=%d overlap=%d",
+        len(documents),
+        args.chunk_size,
+        args.chunk_overlap,
+    )
 
     if args.offline:
         # The lexical embedder derives its weights from the corpus, so
@@ -152,9 +151,7 @@ async def backfill(args: argparse.Namespace) -> int:
             corpus = [
                 d.content or ""
                 for d in (
-                    await db.execute(
-                        select(Document).where(Document.content.isnot(None))
-                    )
+                    await db.execute(select(Document).where(Document.content.isnot(None)))
                 ).scalars()
             ]
         embedder = LexicalEmbedder().fit(corpus)
@@ -228,8 +225,9 @@ def main() -> int:
     args = parse_args()
 
     if args.chunk_overlap >= args.chunk_size:
-        logger.error("overlap (%d) must be smaller than chunk size (%d)",
-                     args.chunk_overlap, args.chunk_size)
+        logger.error(
+            "overlap (%d) must be smaller than chunk size (%d)", args.chunk_overlap, args.chunk_size
+        )
         return 2
 
     if args.dry_run:

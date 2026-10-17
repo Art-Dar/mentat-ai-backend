@@ -109,9 +109,7 @@ async def search_chunks(
         # not make every later query in the session slow too.
         await db.execute(text(f"SET LOCAL hnsw.ef_search = {min(top_k * 4, 1000)}"))
 
-    rows = (
-        await db.execute(_build_query(query_vector, top_k, user_id, document_ids))
-    ).all()
+    rows = (await db.execute(_build_query(query_vector, top_k, user_id, document_ids))).all()
 
     hits = [
         SearchHit(
