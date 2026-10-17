@@ -78,12 +78,16 @@ async def _tags_for_documents(
         return {}
 
     rows = (
-        await db.execute(
-            select(DocumentTag)
-            .where(DocumentTag.document_id.in_(document_ids))
-            .options(selectinload(DocumentTag.tag))
+        (
+            await db.execute(
+                select(DocumentTag)
+                .where(DocumentTag.document_id.in_(document_ids))
+                .options(selectinload(DocumentTag.tag))
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     grouped: dict[uuid.UUID, list[TagReference]] = {}
     for link in rows:
@@ -107,9 +111,7 @@ async def build_retrieval_context(
 
     document_ids = {citation.document_id for citation in citations}
 
-    rows = (
-        await db.execute(select(Document).where(Document.id.in_(document_ids)))
-    ).scalars().all()
+    rows = (await db.execute(select(Document).where(Document.id.in_(document_ids)))).scalars().all()
     documents = {document.id: document for document in rows}
     tags_by_document = await _tags_for_documents(db, document_ids)
 

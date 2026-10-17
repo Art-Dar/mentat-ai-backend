@@ -29,8 +29,14 @@ from app.services.retrieval.search import SearchHit
 
 PAGE_MAP = [
     {"index": 0, "start_char": 0, "end_char": 770, "needs_ocr": False, "source": "pdf"},
-    {"index": 1, "start_char": 772, "end_char": 1542, "needs_ocr": False,
-     "source": "ocr", "mean_confidence": 61.0},
+    {
+        "index": 1,
+        "start_char": 772,
+        "end_char": 1542,
+        "needs_ocr": False,
+        "source": "ocr",
+        "mean_confidence": 61.0,
+    },
 ]
 CONTENT = "x" * 1542
 
@@ -88,8 +94,14 @@ async def library(owner, keep_rows):
             storage_key=f"documents/{owner}/{uuid.uuid4()}.png",
             file_size=1,
             page_map=[
-                {"index": 0, "start_char": 0, "end_char": 200, "needs_ocr": False,
-                 "source": "ocr", "mean_confidence": 54.0}
+                {
+                    "index": 0,
+                    "start_char": 0,
+                    "end_char": 200,
+                    "needs_ocr": False,
+                    "source": "ocr",
+                    "mean_confidence": 54.0,
+                }
             ],
         )
         db.add_all([invoice, receipt])
@@ -239,6 +251,7 @@ async def test_the_query_count_does_not_grow_with_the_number_of_documents(librar
         def record(conn, cursor, statement, parameters, context, executemany):
             if statement.lstrip().upper().startswith("SELECT"):
                 record_into.append(statement)
+
         return record
 
     async def queries_for(hits) -> int:
@@ -285,9 +298,7 @@ async def test_the_schema_carries_everything_the_frontend_needs(library):
     invoice, receipt = library
 
     async with AsyncSessionLocal() as db:
-        citations = await build_citations(
-            db, [hit(invoice, 800, 1200), hit(receipt, 0, 150)]
-        )
+        citations = await build_citations(db, [hit(invoice, 800, 1200), hit(receipt, 0, 150)])
         context = await build_retrieval_context(db, citations)
 
     payload = RetrievalRead.from_context(context).model_dump(mode="json")
@@ -320,11 +331,9 @@ async def test_a_chunk_row_survives_the_whole_chain(library):
 
     async with AsyncSessionLocal() as db:
         document = (
-            await db.execute(select(Document).where(Document.id == invoice))
-        ).scalars().one()
-        citations = await build_citations(
-            db, [hit(document.id, 0, 300)]
+            (await db.execute(select(Document).where(Document.id == invoice))).scalars().one()
         )
+        citations = await build_citations(db, [hit(document.id, 0, 300)])
         payload = RetrievalRead.from_context(
             await build_retrieval_context(db, citations)
         ).model_dump(mode="json")
