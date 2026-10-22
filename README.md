@@ -1,4 +1,5 @@
 # mentat-ai-backend
+Summary & Demo: [Canva Presentation](https://www.canva.com/design/DAHYTB6sOTo/s2T2bEQjNJmBtLahrfm9wA/edit?utm_content=DAHYTB6sOTo&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)
 
 ## Requirements
 * Python 3.12+
