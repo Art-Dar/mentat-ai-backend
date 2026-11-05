@@ -35,6 +35,9 @@ class CitationRead(BaseModel):
     # Opens at the passage where that is possible, not just the document.
     url: str | None
     quote: str
+    # The whole passage. /search only: conversations snapshot this schema, so
+    # it stays out of those rows, and older rows do not have it.
+    text: str | None = None
 
 
 class DocumentRef(BaseModel):
@@ -63,7 +66,9 @@ class RetrievalRead(BaseModel):
     chunk_count: int
 
     @classmethod
-    def from_context(cls, context: RetrievalContext) -> "RetrievalRead":
+    def from_context(
+        cls, context: RetrievalContext, *, include_text: bool = False
+    ) -> "RetrievalRead":
         return cls(
             citations=[
                 CitationRead(
@@ -82,6 +87,7 @@ class RetrievalRead(BaseModel):
                     similarity=c.similarity,
                     url=c.url,
                     quote=c.quote,
+                    text=c.text if include_text else None,
                 )
                 for c in context.citations
             ],

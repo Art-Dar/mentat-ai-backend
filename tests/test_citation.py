@@ -3,6 +3,7 @@ import uuid
 import pytest
 
 from app.models import DocumentSource
+from app.schemas.answer import CitationRead
 from app.services.retrieval.citations import (
     FRAGMENT_WORDS,
     QUOTE_CHARS,
@@ -213,6 +214,37 @@ def test_a_long_chunk_is_quoted_at_a_word_boundary():
     assert len(citation.quote) <= QUOTE_CHARS + 1  # the ellipsis
     assert citation.quote.endswith("…")
     assert not citation.quote.rstrip("…").endswith("invo"), "cut mid-word"
+
+
+def test_the_whole_chunk_is_kept_past_the_quote_limit():
+    content = " ".join(["invoice"] * 200) + "\n\nTotal due: 160.00 EUR"
+    citation = build_citation(hit(0, len(content), content), FakeDocument(), "[1]")
+
+    assert "160.00" not in citation.quote
+    assert citation.text == " ".join(content.split())
+
+
+def test_a_conversation_saved_before_the_text_field_still_loads():
+    citation = _citation()
+    stored = {
+        "marker": citation.marker,
+        "document_id": str(citation.document_id),
+        "chunk_id": str(citation.chunk_id),
+        "title": citation.title,
+        "source": citation.source.value,
+        "locator": citation.locator,
+        "pages": list(citation.pages),
+        "page_count": citation.page_count,
+        "start_char": citation.start_char,
+        "end_char": citation.end_char,
+        "from_ocr": citation.from_ocr,
+        "ocr_confidence": citation.ocr_confidence,
+        "similarity": citation.similarity,
+        "url": citation.url,
+        "quote": citation.quote,
+    }
+
+    assert CitationRead.model_validate(stored).text is None
 
 
 def test_newlines_are_flattened_so_a_prompt_block_stays_readable():

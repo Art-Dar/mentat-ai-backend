@@ -64,7 +64,7 @@ async def search_documents(
         query=payload.query,
         top_k=payload.top_k,
         count=len(hits),
-        retrieval=RetrievalRead.from_context(context),
+        retrieval=RetrievalRead.from_context(context, include_text=True),
         hits=[
             SearchHitRead(
                 chunk_id=hit.chunk_id,
