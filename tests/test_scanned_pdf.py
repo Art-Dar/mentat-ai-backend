@@ -8,6 +8,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
 
+from app.services.ingestion.extractors.ocr import PSM_AUTO
 from app.services.ingestion.extractors.scanned_pdf import (
     MAX_OCR_PAGES,
     OCR_RENDER_DPI,
@@ -181,16 +182,35 @@ def test_pages_over_the_budget_are_reported_not_dropped(monkeypatch):
 
 
 @needs_tesseract
+def test_document_pages_keep_automatic_layout(monkeypatch):
+    """A scanned page can have real columns, so it must not get the receipt mode."""
+    modes = []
+    real = extract_pdf_text_with_ocr.__globals__["extract_image_text"]
+
+    def recording(data, **kwargs):
+        modes.append(kwargs.get("psm"))
+        return real(data, **kwargs)
+
+    monkeypatch.setattr(
+        "app.services.ingestion.extractors.scanned_pdf.extract_image_text", recording
+    )
+
+    extract_pdf_text_with_ocr(build_pdf(("scan", RECEIPT)))
+
+    assert modes == [PSM_AUTO]
+
+
+@needs_tesseract
 def test_one_unreadable_page_does_not_lose_the_others(monkeypatch):
     """A single bad page is not a reason to fail a whole document."""
     calls = {"n": 0}
     real = extract_pdf_text_with_ocr.__globals__["extract_image_text"]
 
-    def flaky(data, *, language="eng"):
+    def flaky(data, **kwargs):
         calls["n"] += 1
         if calls["n"] == 1:
             raise RuntimeError("pretend this page is corrupt")
-        return real(data, language=language)
+        return real(data, **kwargs)
 
     monkeypatch.setattr("app.services.ingestion.extractors.scanned_pdf.extract_image_text", flaky)
 

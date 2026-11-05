@@ -7,6 +7,7 @@ import pypdfium2 as pdfium
 
 from app.services.ingestion.extractors.ocr import (
     DEFAULT_LANGUAGE,
+    PSM_AUTO,
     OcrEngineUnavailable,
     OcrError,
     extract_image_text,
@@ -117,7 +118,8 @@ def extract_pdf_text_with_ocr(data: bytes, *, language: str = DEFAULT_LANGUAGE) 
         for index in targets:
             try:
                 png = _render_page(document, index)
-                result = extract_image_text(png, language=language)
+                # A document page can have real columns, unlike a receipt photo.
+                result = extract_image_text(png, language=language, psm=PSM_AUTO)
             except OcrEngineUnavailable as exc:
                 logger.warning("OCR unavailable, leaving %d page(s) unread: %s", len(targets), exc)
                 ocr_available = False

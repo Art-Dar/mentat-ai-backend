@@ -416,7 +416,7 @@ def test_the_refusal_threshold_is_the_pipelines_own(upload):
 def test_a_readable_pdf_survives_a_missing_ocr_engine(upload, monkeypatch, db_session):
     from app.services.ingestion.extractors.ocr import OcrEngineUnavailable
 
-    def no_engine(data, *, language="eng"):
+    def no_engine(data, **kwargs):
         raise OcrEngineUnavailable("the tesseract binary is not installed on this host")
 
     monkeypatch.setattr(
@@ -437,7 +437,7 @@ def test_a_readable_pdf_survives_a_missing_ocr_engine(upload, monkeypatch, db_se
 def test_an_unreadable_pdf_without_an_engine_is_503_not_422(upload, monkeypatch, store):
     from app.services.ingestion.extractors.ocr import OcrEngineUnavailable
 
-    def no_engine(data, *, language="eng"):
+    def no_engine(data, **kwargs):
         raise OcrEngineUnavailable("the tesseract binary is not installed on this host")
 
     monkeypatch.setattr(

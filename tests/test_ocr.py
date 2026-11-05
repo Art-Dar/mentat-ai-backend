@@ -195,6 +195,32 @@ def test_a_clean_scan_is_read():
 
 
 @needs_tesseract
+def test_a_right_aligned_price_column_survives_a_photo_background():
+    """
+    The price is what a receipt is searched for. Paper on a darker table is
+    what makes tesseract's automatic layout drop the column altogether.
+    """
+    rows = [("Flat white", "3.80"), ("Cold brew", "4.20"), ("TOTAL EUR", "19.40")]
+    paper = Image.new("RGB", (720, 400), (247, 244, 236))
+    draw = ImageDraw.Draw(paper)
+    draw.text((40, 40), "BLUE DOOR CAFE", fill="black", font=_font(30))
+    for row, (item, price) in enumerate(rows):
+        y = 110 + 44 * row
+        draw.text((40, y), item, fill="black", font=_font(30))
+        draw.text((680, y), price, fill="black", font=_font(30), anchor="ra")
+    draw.text((40, 300), "Paid by card", fill="black", font=_font(30))
+    photo = Image.new("RGB", (920, 600), (92, 70, 54))
+    photo.paste(paper, (100, 100))
+    buf = io.BytesIO()
+    photo.save(buf, "PNG")
+
+    text = extract_image_text(buf.getvalue()).text
+
+    for item, price in rows:
+        assert any(item in line and price in line for line in text.splitlines()), text
+
+
+@needs_tesseract
 def test_word_boxes_land_inside_the_image():
     """
     The boxes are what a citation will point at, so coordinates that fall

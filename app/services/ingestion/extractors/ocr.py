@@ -18,6 +18,13 @@ OCR_TIMEOUT_SECONDS = 30
 
 DEFAULT_LANGUAGE = "eng"
 
+# Tesseract page segmentation modes. AUTO hunts for columns, which is right
+# for a scanned document page but treats a receipt's right-aligned prices as
+# a separate column and can lose them entirely. UNIFORM_BLOCK keeps each
+# printed line together, at the cost of reading across real columns.
+PSM_AUTO = 3
+PSM_UNIFORM_BLOCK = 6
+
 
 class OcrError(RuntimeError):
     """The image could not be turned into text."""
@@ -151,17 +158,21 @@ def _engine_failure(exc: RuntimeError, language: str) -> OcrError:
     return OcrError(f"OCR failed: {exc}")
 
 
-def extract_image_text(data: bytes, *, language: str = DEFAULT_LANGUAGE) -> OcrExtraction:
+def extract_image_text(
+    data: bytes, *, language: str = DEFAULT_LANGUAGE, psm: int = PSM_UNIFORM_BLOCK
+) -> OcrExtraction:
     """
     Recognise text in an image.
     Returns an empty-but-valid extraction for a blank page
     """
     image = _open(data)
+    config = f"--psm {psm}"
 
     try:
         data_dict = pytesseract.image_to_data(
             image,
             lang=language,
+            config=config,
             output_type=Output.DICT,
             timeout=OCR_TIMEOUT_SECONDS,
         )
@@ -205,7 +216,9 @@ def extract_image_text(data: bytes, *, language: str = DEFAULT_LANGUAGE) -> OcrE
         )
 
     try:
-        text = pytesseract.image_to_string(image, lang=language, timeout=OCR_TIMEOUT_SECONDS)
+        text = pytesseract.image_to_string(
+            image, lang=language, config=config, timeout=OCR_TIMEOUT_SECONDS
+        )
     except RuntimeError as exc:
         raise _engine_failure(exc, language) from exc
 
