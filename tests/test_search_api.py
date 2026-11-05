@@ -328,6 +328,16 @@ def test_search_returns_the_retrieval_object_the_frontend_renders(
         assert field in citation, f"the frontend contract promises {field}"
 
 
+def test_a_citation_carries_the_whole_passage(client, auth_headers, make_chunk, fake_embedder):
+    """An answer can sit past the short quote, so a model needs all of the chunk."""
+    make_chunk(" ".join(["espresso"] * 100) + " Total due: 160.00 EUR")
+
+    citation = search(client, auth_headers, min_similarity=-1.0).json()["retrieval"]["citations"][0]
+
+    assert "160.00" not in citation["quote"]
+    assert citation["text"].endswith("Total due: 160.00 EUR")
+
+
 def test_markers_are_one_to_n_with_no_gaps(client, auth_headers, make_multi_chunk, fake_embedder):
     """A gap would look to a reader like a footnote that went missing."""
     make_multi_chunk()

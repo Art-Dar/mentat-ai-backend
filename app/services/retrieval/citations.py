@@ -47,7 +47,10 @@ class Citation:
     # A link that opens at the passage where that is possible, not merely
     # at the document.
     url: str | None
+    # A footnote-sized excerpt from the start of the chunk, for a UI.
     quote: str
+    # The whole chunk, for a reader that has to find the answer in it.
+    text: str = ""
 
     @property
     def page_label(self) -> str:
@@ -176,6 +179,7 @@ def build_citation(hit: SearchHit, document: Document, marker: str) -> Citation:
         similarity=hit.similarity,
         url=_text_fragment_url(document.url, quote),
         quote=quote,
+        text=" ".join(hit.content.split()),
     )
 
 

@@ -243,6 +243,7 @@ def test_another_users_documents_never_reach_the_answer(
     assert body["retrieval"]["document_count"] == 1
     for citation in body["retrieval"]["citations"]:
         assert "PRIVATE RECEIPT" not in citation["quote"]
+        assert citation["text"] is None, "conversations snapshot this, keep it small"
 
 
 def test_authentication_is_required(client, fake_embedder, chat):

@@ -36,6 +36,7 @@ CITATION_KEYS = {
     "similarity",
     "url",
     "quote",
+    "text",
 }
 
 # --- interface DocumentRef
