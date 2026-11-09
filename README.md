@@ -1,4 +1,5 @@
 # mentat-ai-backend
+[Jira Backlog](https://verbytskyiartem.atlassian.net/jira/software/projects/SB/boards/34/backlog)
 
 ## Requirements
 * Python 3.12+
