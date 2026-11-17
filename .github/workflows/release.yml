@@ -1,0 +1,44 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to package, e.g. v2.0'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: Build archive with commit id
+        run: |
+          mkdir stage
+          git archive HEAD | tar -x -C stage
+          echo "$GITHUB_SHA" > stage/COMMIT
+          cd stage && zip -qr "../mentat-backend-$TAG-${GITHUB_SHA::7}.zip" .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mentat-backend-${{ env.TAG }}
+          path: mentat-backend-*.zip
+          retention-days: 90
+
+      - name: Attach to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$TAG" mentat-backend-*.zip \
+            --title "$TAG" --notes "Built from commit $GITHUB_SHA" \
+            || gh release upload "$TAG" mentat-backend-*.zip --clobber
