@@ -1,4 +1,4 @@
-#Reads the JSON-lines request log written and reports success/failure counts
+# Reads the JSON-lines request log written and reports success/failure counts
 import json
 import sys
 from pathlib import Path
@@ -62,8 +62,10 @@ def main() -> None:
     if failures:
         print("\nfailed requests:")
         for r in failures:
-            print(f"  {r.get('ts')}  {r.get('method')} {r.get('route')} "
-                  f"-> {r.get('status')}  request_id={r.get('request_id')}")
+            print(
+                f"  {r.get('ts')}  {r.get('method')} {r.get('route')} "
+                f"-> {r.get('status')}  request_id={r.get('request_id')}"
+            )
 
 
 if __name__ == "__main__":
